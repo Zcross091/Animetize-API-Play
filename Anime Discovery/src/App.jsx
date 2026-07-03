@@ -319,8 +319,6 @@ function App() {
           {isPlaying ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="video-wrapper">
-                
-                <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {isLoadingStream ? (
                   <div className="p2p-state">
                     <h3 className="loading">Decrypting nodes...</h3>
@@ -377,7 +375,6 @@ function App() {
                     <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" title="Anime Player" style={{ width: '100%', height: '100%', border: 'none' }}></iframe>
                   </>
                 ) : null}
-              </div>
               </div>
 
               {/* Server Switchers & Download Button row below video */}
