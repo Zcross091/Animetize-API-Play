@@ -19,8 +19,18 @@ function App() {
   const [isLoadingStream, setIsLoadingStream] = useState(false);
   const [streamError, setStreamError] = useState(false);
   const [isMagnet, setIsMagnet] = useState(false);
+  const [downloadMagnetUrl, setDownloadMagnetUrl] = useState(null);
+  const [availableEpisodes, setAvailableEpisodes] = useState([]);
+  const [activeEpRange, setActiveEpRange] = useState(0);
+  
+  const [availableStreams, setAvailableStreams] = useState({});
+  const [activeStreamFormat, setActiveStreamFormat] = useState(null);
   
   const [activeTab, setActiveTab] = useState('discover');
+  const [watchHistory, setWatchHistory] = useState(() => {
+    const saved = localStorage.getItem('animeWatchHistory');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Example trending anime for the initial view
   const trendingAnime = [
@@ -57,10 +67,29 @@ function App() {
     }
   };
 
-  const openAnime = (anime) => {
+  const openAnime = async (anime) => {
     setSelectedAnime(anime);
     setIsPlaying(false);
     setActiveEpisode(null);
+    setActiveEpRange(0);
+    
+    // Default to Jikan's count immediately for responsive UI
+    let baseEps = Array.from({length: anime.ep_count || 12}, (_, i) => i + 1);
+    setAvailableEpisodes(baseEps);
+    
+    // Query our own database to strictly match this anime (and its dub)
+    const searchTitle = anime.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const { data } = await supabase
+      .from('anime_links')
+      .select('episode')
+      .in('title', [searchTitle, `${searchTitle} dub`]);
+      
+    if (data && data.length > 0) {
+       const maxDbEp = Math.max(...data.map(d => d.episode));
+       if (maxDbEp > (anime.ep_count || 0)) {
+           setAvailableEpisodes(Array.from({length: maxDbEp}, (_, i) => i + 1));
+       }
+    }
   };
 
   const closePlayer = () => {
@@ -70,11 +99,31 @@ function App() {
     setStreamUrl(null);
     setStreamError(false);
     setIsMagnet(false);
+    setDownloadMagnetUrl(null);
+    setAvailableStreams({});
+    setActiveStreamFormat(null);
   };
 
   const handleEpisodeChange = (ep) => {
     setActiveEpisode(ep);
     setIsPlaying(true);
+    
+    // Save to Local Storage (Continue Watching)
+    const newEntry = {
+      title: selectedAnime.title,
+      image: selectedAnime.image,
+      ep_count: selectedAnime.ep_count,
+      lastEp: ep,
+      timestamp: Date.now()
+    };
+    
+    setWatchHistory(prev => {
+      const filtered = prev.filter(item => item.title !== selectedAnime.title);
+      const updated = [newEntry, ...filtered];
+      localStorage.setItem('animeWatchHistory', JSON.stringify(updated));
+      return updated;
+    });
+
     fetchStream(selectedAnime.title, ep);
   };
 
@@ -84,50 +133,47 @@ function App() {
     setIsIframe(false);
     setIsMagnet(false);
     setStreamUrl(null);
+    setDownloadMagnetUrl(null);
 
     try {
       const searchTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
       
       const { data: dbResList, error } = await supabase
         .from('anime_links')
-        .select('url')
-        .ilike('title', `%${searchTitle}%`)
+        .select('title, url, type')
+        .in('title', [searchTitle, `${searchTitle} dub`])
         .eq('episode', parseInt(epNum));
         
       if (error || !dbResList || dbResList.length === 0) {
         throw new Error("Stream not found");
       }
       
-      const dbRes = dbResList[0];
-      
-      let finalUrl = dbRes.url;
-      let iframeFlag = false;
+      let formats = {
+        'http-sub': null,
+        'http-dub': null,
+        'torrent': null
+      };
 
-      // Handle Gogoanime JSON tokens
-      try {
-          const parsedJson = JSON.parse(dbRes.url);
-          if (parsedJson && parsedJson.bloggerToken) {
-              const qs = new URLSearchParams({
-                  Blogger: parsedJson.bloggerToken,
-                  feature_image: parsedJson.featureImage || '',
-                  ref: "gogoanime.by"
-              }).toString();
-              finalUrl = `https://9animetv.be/wp-content/plugins/video-player/includes/player/n-bg/player.php?${qs}`;
-              iframeFlag = true;
-          }
-      } catch (e) {
-          // Not JSON, it's either a raw iframe or a magnet link
-          if (!finalUrl.startsWith('magnet:')) {
-            iframeFlag = true;
+      for (const dbRes of dbResList) {
+          if (dbRes.url.startsWith('magnet:')) {
+              formats['torrent'] = dbRes.url;
+          } else if (dbRes.title.endsWith(' dub')) {
+              formats['http-dub'] = dbRes.url;
+          } else {
+              formats['http-sub'] = dbRes.url;
           }
       }
+
+      setAvailableStreams(formats);
       
-      if (finalUrl.startsWith('magnet:')) {
-        setIsMagnet(true);
-        setStreamUrl(finalUrl);
+      if (formats['http-sub']) {
+          setActiveStreamFormat('http-sub');
+      } else if (formats['http-dub']) {
+          setActiveStreamFormat('http-dub');
+      } else if (formats['torrent']) {
+          setActiveStreamFormat('torrent');
       } else {
-        setIsIframe(iframeFlag);
-        setStreamUrl(finalUrl);
+          throw new Error("Unknown stream type");
       }
     } catch(err) {
       setStreamError(true);
@@ -139,7 +185,7 @@ function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <div className="logo" style={{cursor: 'pointer'}} onClick={() => setActiveTab('discover')}>Animetize</div>
+        <div className="logo" style={{cursor: 'pointer'}} onClick={() => setActiveTab('discover')}>Fanime</div>
         <nav className="main-nav">
           <button 
             className={`nav-btn ${activeTab === 'discover' ? 'active' : ''}`}
@@ -218,19 +264,38 @@ function App() {
         </section>
           </>
         ) : (
-          <section className="mylist-section" style={{textAlign: 'center', padding: '6rem 2rem'}}>
-            <div className="p2p-icon" style={{fontSize: '5rem', marginBottom: '1rem', color: 'var(--text-secondary)'}}>📚</div>
-            <h2 style={{fontSize: '2.5rem', marginBottom: '1rem'}}>Your List is Empty</h2>
-            <p style={{color: 'var(--text-secondary)', fontSize: '1.2rem', marginBottom: '2rem'}}>
-              Start exploring the decentralized swarm and add your favorite series here.
-            </p>
-            <button 
-              className="magnet-btn" 
-              onClick={() => setActiveTab('discover')}
-              style={{cursor: 'pointer', border: 'none'}}
-            >
-              Start Discovering
-            </button>
+          <section className="mylist-section">
+            <h2 className="section-title">Continue Watching</h2>
+            {watchHistory.length === 0 ? (
+              <div style={{textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)'}}>
+                <div style={{fontSize: '3rem', marginBottom: '1rem'}}>🍿</div>
+                <p>You haven't watched anything yet.</p>
+                <button 
+                  className="magnet-btn" 
+                  style={{marginTop: '1rem', padding: '0.8rem 2rem'}}
+                  onClick={() => setActiveTab('discover')}
+                >
+                  Discover Anime
+                </button>
+              </div>
+            ) : (
+              <div className="anime-grid">
+                {watchHistory.map((item, idx) => (
+                  <div key={idx} className="anime-card" onClick={() => openAnime(item)}>
+                    <img src={item.image} alt={item.title} className="card-image" />
+                    <div className="card-content">
+                      <h3 className="card-title">{item.title}</h3>
+                      <div className="card-meta">
+                        <span className="ep-count">Watched: Ep {item.lastEp} / {item.ep_count}</span>
+                      </div>
+                      <div style={{marginTop: '1rem', width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px'}}>
+                        <div style={{height: '100%', width: `${Math.min(100, (item.lastEp / item.ep_count) * 100)}%`, background: 'var(--accent-color)', borderRadius: '2px'}}></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
       </main>
@@ -245,7 +310,35 @@ function App() {
             </div>
             
             {isPlaying ? (
-              <div className="video-wrapper">
+              <div className="video-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.5)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  {availableStreams['http-sub'] && (
+                    <button 
+                      className={`ep-btn ${activeStreamFormat === 'http-sub' ? 'active' : ''}`}
+                      onClick={() => setActiveStreamFormat('http-sub')}
+                    >
+                      HTTP (Sub)
+                    </button>
+                  )}
+                  {availableStreams['http-dub'] && (
+                    <button 
+                      className={`ep-btn ${activeStreamFormat === 'http-dub' ? 'active' : ''}`}
+                      onClick={() => setActiveStreamFormat('http-dub')}
+                    >
+                      HTTP (Dub)
+                    </button>
+                  )}
+                  {availableStreams['torrent'] && (
+                    <button 
+                      className={`ep-btn ${activeStreamFormat === 'torrent' ? 'active' : ''}`}
+                      onClick={() => setActiveStreamFormat('torrent')}
+                    >
+                      P2P Torrent
+                    </button>
+                  )}
+                </div>
+                
+                <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {isLoadingStream ? (
                   <div className="p2p-state">
                     <h3 className="loading">Decrypting nodes...</h3>
@@ -256,30 +349,30 @@ function App() {
                     <h3>Stream Not Found</h3>
                     <p>Our miners haven't archived this episode yet. Please check back later.</p>
                   </div>
-                ) : isMagnet ? (
-                  <div className="p2p-state" style={{maxWidth: '600px', margin: '0 auto', padding: '2rem'}}>
-                  <div className="p2p-icon" style={{fontSize: '3rem', marginBottom: '1rem'}}>⚡</div>
-                  <h3 style={{fontSize: '1.8rem', marginBottom: '1rem'}}>Decentralized Stream Ready</h3>
-                  <p style={{marginBottom: '2rem', color: 'var(--text-secondary)', lineHeight: '1.6'}}>
+                ) : activeStreamFormat === 'torrent' ? (
+                  <div className="p2p-state" style={{maxWidth: '600px', margin: '0 auto', padding: '1rem 2rem'}}>
+                  <div className="p2p-icon" style={{fontSize: '2.5rem', marginBottom: '0.5rem'}}>⚡</div>
+                  <h3 style={{fontSize: '1.5rem', marginBottom: '0.5rem'}}>Decentralized Stream Ready</h3>
+                  <p style={{marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.4'}}>
                     To bypass browser sandbox limits and stream ultra high-quality `.mkv` files without ads or buffering, you must use a dedicated P2P client.
                   </p>
                   
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center'}}>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'center'}}>
                     <a 
-                      href={streamUrl} 
+                      href={availableStreams['torrent']} 
                       target="_blank" 
                       rel="noopener noreferrer" 
                       className="magnet-btn"
-                      style={{width: '100%', padding: '1rem', fontSize: '1.2rem', fontWeight: 'bold'}}
+                      style={{width: '100%', padding: '0.8rem', fontSize: '1.1rem', fontWeight: 'bold'}}
                     >
                       ▶️ Launch WebTorrent
                     </a>
                     
                     <button 
                       className="magnet-btn" 
-                      style={{background: 'rgba(255,255,255,0.05)', boxShadow: 'none', width: '100%'}}
+                      style={{background: 'rgba(255,255,255,0.05)', boxShadow: 'none', width: '100%', padding: '0.6rem', fontSize: '0.9rem'}}
                       onClick={() => {
-                        navigator.clipboard.writeText(streamUrl);
+                        navigator.clipboard.writeText(availableStreams['torrent']);
                         alert("Magnet link copied! You can paste this directly into WebTorrent Desktop.");
                       }}
                     >
@@ -287,22 +380,29 @@ function App() {
                     </button>
                   </div>
                   
-                  <div style={{marginTop: '2rem', padding: '1.5rem', background: 'rgba(255,100,100,0.1)', borderRadius: '12px', border: '1px solid rgba(255,100,100,0.2)'}}>
-                    <h4 style={{color: '#ff6b6b', marginBottom: '0.5rem'}}>Nothing happened?</h4>
-                    <p style={{fontSize: '0.9rem', color: 'var(--text-secondary)'}}>
-                      If the button above didn't open an app, you don't have a supported P2P player installed. <br/><br/>
-                      <a href="https://webtorrent.io/desktop/" target="_blank" rel="noopener noreferrer" style={{color: '#fff', textDecoration: 'underline'}}>
-                        Download WebTorrent Desktop
-                      </a> 
-                      &nbsp;(Free & Open Source) to start streaming instantly.
-                    </p>
+                  <div style={{marginTop: '1.5rem', padding: '1rem', background: 'rgba(255,100,100,0.05)', borderRadius: '8px', border: '1px solid rgba(255,100,100,0.1)', display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                    <div style={{fontSize: '1.5rem'}}>⚠️</div>
+                    <div style={{textAlign: 'left'}}>
+                      <h4 style={{color: '#ff6b6b', margin: 0, fontSize: '0.9rem'}}>Nothing happened?</h4>
+                      <p style={{margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
+                        You need <a href="https://webtorrent.io/desktop/" target="_blank" rel="noopener noreferrer" style={{color: '#fff', textDecoration: 'underline'}}>WebTorrent Desktop</a> to stream instantly.
+                      </p>
+                    </div>
                   </div>
                 </div>
-                ) : streamUrl && isIframe ? (
-                  <iframe src={streamUrl} allowFullScreen allow="autoplay; fullscreen" title="Anime Player"></iframe>
-                ) : streamUrl ? (
-                  <video src={streamUrl} controls autoPlay></video>
+                ) : activeStreamFormat && activeStreamFormat.startsWith('http') ? (
+                  <>
+                    <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" title="Anime Player" style={{ width: '100%', height: '100%', border: 'none' }}></iframe>
+                    {availableStreams['torrent'] && (
+                      <div style={{position: 'absolute', bottom: '10px', right: '10px', zIndex: 10}}>
+                        <a href={availableStreams['torrent']} target="_blank" rel="noopener noreferrer" className="magnet-btn" style={{fontSize: '0.9rem', padding: '0.5rem 1rem', width: 'auto', borderRadius: '50px', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)'}}>
+                          ⬇️ DL Torrent
+                        </a>
+                      </div>
+                    )}
+                  </>
                 ) : null}
+                </div>
               </div>
             ) : (
               <div style={{display: 'flex', gap: '2rem', padding: '2rem', background: '#0a0a0a'}}>
@@ -321,8 +421,24 @@ function App() {
               </div>
             )}
             
+            
+            {availableEpisodes.length > 100 && (
+              <div style={{ display: 'flex', gap: '0.5rem', padding: '1rem 2rem', overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                {Array.from({ length: Math.ceil(availableEpisodes.length / 100) }).map((_, idx) => (
+                  <button 
+                    key={idx}
+                    className={`ep-btn ${activeEpRange === idx ? 'active' : ''}`}
+                    style={{ minWidth: 'fit-content', padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+                    onClick={() => setActiveEpRange(idx)}
+                  >
+                    Eps {idx * 100 + 1}-{Math.min((idx + 1) * 100, availableEpisodes.length)}
+                  </button>
+                ))}
+              </div>
+            )}
+            
             <div className="episode-selector">
-              {Array.from({length: selectedAnime.ep_count || 24}, (_, i) => i + 1).map(ep => (
+              {availableEpisodes.slice(activeEpRange * 100, (activeEpRange + 1) * 100).map(ep => (
                 <button 
                   key={ep} 
                   className={`ep-btn ${ep === activeEpisode ? 'active' : ''}`}

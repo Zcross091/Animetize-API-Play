@@ -249,29 +249,50 @@ h1, h2, h3, h4, h5 {
 
 /* Glass Card */
 .anime-card {
-  background: var(--glass-bg);
+  background: rgba(20, 20, 20, 0.5);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   overflow: hidden;
-  backdrop-filter: blur(10px);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
   position: relative;
 }
 
+.anime-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 16px;
+  box-shadow: 0 0 0 0 var(--accent-color);
+  opacity: 0;
+  transition: all 0.4s ease;
+  pointer-events: none;
+}
+
 .anime-card:hover {
-  transform: translateY(-8px);
-  background: var(--glass-hover);
-  border-color: rgba(255,255,255,0.15);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px rgba(139, 92, 246, 0.1);
+  transform: translateY(-8px) scale(1.02);
+  background: rgba(30, 30, 30, 0.8);
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+.anime-card:hover::before {
+  opacity: 1;
 }
 
 .card-image {
   width: 100%;
-  aspect-ratio: 16/9;
+  height: 280px;
   object-fit: cover;
-  border-bottom: 1px solid var(--glass-border);
-  background: #111;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.5s ease;
+}
+
+.anime-card:hover .card-image {
+  transform: scale(1.05);
 }
 
 .card-content {
@@ -306,18 +327,15 @@ h1, h2, h3, h4, h5 {
 /* Premium Player Modal */
 .player-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(20px);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(30px);
   z-index: 1000;
   display: flex;
-  align-items: center;
   justify-content: center;
-  opacity: 0;
-  animation: fadeIn 0.4s forwards;
+  align-items: center;
+  padding: 2rem;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
@@ -325,19 +343,23 @@ h1, h2, h3, h4, h5 {
 }
 
 .player-container {
-  width: 90%;
-  max-width: 1000px;
-  background: #000;
-  border: 1px solid var(--glass-border);
+  background: rgba(10, 10, 10, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(139, 92, 246, 0.2);
   border-radius: 20px;
+  width: 100%;
+  max-width: 1200px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 100px rgba(139, 92, 246, 0.15);
-  transform: scale(0.95);
-  animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(20px);
 }
 
-@keyframes scaleUp {
-  to { transform: scale(1); }
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .player-header {
@@ -424,23 +446,28 @@ h1, h2, h3, h4, h5 {
 }
 
 .magnet-btn {
-  display: inline-block;
   background: var(--accent-gradient);
   color: white;
-  text-decoration: none;
-  padding: 1rem 3rem;
-  border-radius: 100px;
-  font-weight: 700;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 12px;
   font-size: 1.1rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  transition: all 0.3s;
-  box-shadow: 0 10px 30px var(--accent-glow);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px var(--accent-glow);
 }
 
 .magnet-btn:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 15px 40px rgba(139, 92, 246, 0.8);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 25px var(--accent-glow);
+  filter: brightness(1.1);
+}
+
+.magnet-btn:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 /* Error State */
@@ -458,22 +485,32 @@ h1, h2, h3, h4, h5 {
 }
 
 .ep-btn {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ep-btn:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .ep-btn.active {
   background: var(--accent-gradient);
   border-color: transparent;
   font-weight: 600;
+  box-shadow: 0 0 15px var(--accent-glow);
+  transform: scale(1.05);
+}
+
+.ep-btn:active {
+  transform: scale(0.95);
 }
