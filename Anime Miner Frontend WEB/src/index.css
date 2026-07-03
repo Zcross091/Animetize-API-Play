@@ -1,0 +1,464 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg-color: #000000;
+  --bg-color-light: #141519;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  
+  /* Crunchyroll Orange */
+  --accent-color: #F47521;
+  --accent-hover: #ff8c3d;
+  --accent-glow: rgba(244, 117, 33, 0.4);
+  
+  --font-main: 'Plus Jakarta Sans', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  line-height: 1.6;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-color); 
+}
+::-webkit-scrollbar-thumb {
+  background: #333; 
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color); 
+}
+
+/* Base App Layout */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header / Nav */
+.header {
+  padding: 1rem 5%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid #222;
+  gap: 2rem;
+}
+
+.logo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--accent-color);
+  letter-spacing: -0.05em;
+  transition: opacity 0.2s;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.main-nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+  color: var(--text-primary);
+}
+
+.nav-btn.active {
+  color: var(--accent-color);
+}
+
+/* Search Bar in Header */
+.search-container {
+  flex: 1;
+  max-width: 400px;
+  margin-left: auto;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  background: #222;
+}
+
+/* Hero Carousel */
+.hero-carousel {
+  position: relative;
+  width: 100%;
+  height: 70vh;
+  background-color: var(--bg-color-light);
+  overflow: hidden;
+}
+
+.hero-slide {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+  display: flex;
+  align-items: center;
+}
+
+.hero-slide.active {
+  opacity: 1;
+  z-index: 10;
+}
+
+.hero-gradient {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%),
+              linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 20%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 0 5%;
+  max-width: 600px;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800;
+  margin-bottom: 1rem;
+  line-height: 1.1;
+  text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+}
+
+.hero-synopsis {
+  font-size: 1.1rem;
+  color: #ddd;
+  margin-bottom: 1.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  text-shadow: 1px 1px 5px rgba(0,0,0,0.8);
+}
+
+.watch-btn {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.watch-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.02);
+}
+
+/* Horizontal Carousels */
+.content-row {
+  padding: 2rem 5%;
+}
+
+.row-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.row-title::before {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 24px;
+  background-color: var(--accent-color);
+}
+
+.carousel-container {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-behavior: smooth;
+}
+
+.anime-card {
+  flex: 0 0 auto;
+  width: 220px;
+  background: var(--bg-color-light);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.anime-card:hover {
+  transform: scale(1.04);
+  z-index: 2;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+.card-image {
+  width: 100%;
+  height: 330px;
+  object-fit: cover;
+}
+
+.card-content {
+  padding: 0.8rem;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.3rem;
+}
+
+.card-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+}
+
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 4rem;
+  color: var(--accent-color);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+/* Premium Player Page */
+.player-page {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+.player-header {
+  padding: 1.5rem 5%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-color-light);
+  border-bottom: 1px solid #222;
+}
+
+.player-header h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.video-wrapper {
+  aspect-ratio: 16/9;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  background: #000;
+  position: relative;
+}
+
+.video-wrapper iframe, .video-wrapper video {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* P2P Magnet State */
+.p2p-state {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  text-align: center;
+  padding: 2rem;
+}
+
+.p2p-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.p2p-state h3 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.p2p-state p {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  max-width: 500px;
+}
+
+.magnet-btn {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+}
+
+.magnet-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* Error State */
+.error-state {
+  color: #ef4444;
+}
+
+/* Episode Selector */
+.episode-selector {
+  display: flex;
+  padding: 1.5rem 5%;
+  gap: 1rem;
+  overflow-x: auto;
+  background: var(--bg-color-light);
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
+.episode-selector::-webkit-scrollbar {
+  height: 6px;
+}
+
+.ep-btn {
+  background: #222;
+  border: 1px solid #333;
+  color: var(--text-primary);
+  padding: 0.8rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.2s;
+  min-width: 80px;
+}
+
+.ep-btn:hover {
+  background: #333;
+}
+
+.ep-btn.active {
+  background: var(--text-primary);
+  color: #000;
+  border-color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* 📱 Responsive Mobile Layout Adjustments */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .search-container {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .hero-carousel {
+    height: 50vh;
+  }
+  
+  .hero-title {
+    font-size: 2rem;
+  }
+  
+  .hero-synopsis {
+    -webkit-line-clamp: 3;
+    font-size: 0.95rem;
+  }
+  
+  .anime-card {
+    width: 160px;
+  }
+  
+  .card-image {
+    height: 240px;
+  }
+}
