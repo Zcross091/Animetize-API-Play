@@ -82,10 +82,12 @@ function App() {
     const { data } = await supabase
       .from('anime_links')
       .select('episode')
-      .in('title', [searchTitle, `${searchTitle} dub`]);
+      .in('title', [searchTitle, `${searchTitle} dub`])
+      .order('episode', { ascending: false })
+      .limit(1);
       
     if (data && data.length > 0) {
-       const maxDbEp = Math.max(...data.map(d => d.episode));
+       const maxDbEp = data[0].episode;
        if (maxDbEp > (anime.ep_count || 0)) {
            setAvailableEpisodes(Array.from({length: maxDbEp}, (_, i) => i + 1));
        }
