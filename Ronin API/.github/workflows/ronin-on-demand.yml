@@ -1,0 +1,58 @@
+name: Ronin On-Demand Mining
+
+on:
+  repository_dispatch:
+    types: [search-or-mine]
+
+  # Also allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      query:
+        description: 'Anime title to search and mine'
+        required: true
+        default: 'Naruto'
+
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout private Ronin API repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'Ronin API/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: 'Ronin API'
+        run: npm ci
+
+      - name: Install ts-node globally
+        run: npm install -g ts-node typescript
+
+      - name: Run Ronin One-Shot Miner
+        working-directory: 'Ronin API'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GOGO_DOMAINS: ${{ secrets.GOGO_DOMAINS }}
+          ANIWAVE_CLUSTER: ${{ secrets.ANIWAVE_CLUSTER }}
+          HIANIME_CLUSTER: ${{ secrets.HIANIME_CLUSTER }}
+          ANILIST_ACTIVE_DOMAIN: ${{ secrets.ANILIST_ACTIVE_DOMAIN }}
+          MYANIMELIST_ACTIVE_DOMAIN: ${{ secrets.MYANIMELIST_ACTIVE_DOMAIN }}
+          NYAASI_ACTIVE_DOMAIN: ${{ secrets.NYAASI_ACTIVE_DOMAIN }}
+        run: |
+          # Use query from repository_dispatch payload, or from manual workflow_dispatch input
+          SEARCH_QUERY="${{ github.event.client_payload.query || github.event.inputs.query }}"
+          echo "🔍 Mining for: $SEARCH_QUERY"
+          ts-node runQuery.ts "$SEARCH_QUERY"
+
+      - name: Report result
+        if: always()
+        run: |
+          echo "✅ Workflow complete. Results have been written to Supabase."
