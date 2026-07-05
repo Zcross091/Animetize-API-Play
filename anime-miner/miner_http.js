@@ -31,7 +31,7 @@ async function scrapeAnimePage(browser, animeUrl, ignoreCache = false) {
         const slugBase = slugMatch ? slugMatch[1].split('-')[0] : ''; // Just use the first primary word (e.g., 'dragon')
 
         // Find all episode links on the anime page
-        const episodeLinks = await page.evaluate((base) => {
+        let episodeLinks = await page.evaluate((base) => {
             const links = Array.from(document.querySelectorAll('a'));
             return [...new Set(links.filter(l => l.href && l.href.includes('-episode-') && l.href.includes(base)).map(l => l.href))];
         }, slugBase);
