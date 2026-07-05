@@ -303,17 +303,17 @@ body {
 }
 
 /* ─── Anime Card Responsive Width ─── */
-/* Phone: ~4 visible (22vw each) */
-.anime-card { width: 22vw; }
+/* Phone: ~5 visible */
+.anime-card { width: 19vw; }
 
-/* Larger phone / small tablet: ~4.5 visible */
-@media (min-width: 480px)  { .anime-card { width: 20vw; } }
+/* Larger phone / small tablet: ~5.5 visible */
+@media (min-width: 480px)  { .anime-card { width: 17vw; } }
 
-/* Tablet: ~5 visible */
-@media (min-width: 768px)  { .anime-card { width: 18vw; } }
+/* Tablet: ~6 visible */
+@media (min-width: 768px)  { .anime-card { width: 15vw; } }
 
-/* Desktop: ~6 visible */
-@media (min-width: 1024px) { .anime-card { width: 15vw; } }
+/* Desktop: ~7 visible */
+@media (min-width: 1024px) { .anime-card { width: 13vw; } }
 
-/* Large desktop: still ~6 but capped */
-@media (min-width: 1440px) { .anime-card { width: 13vw; } }
+/* Large desktop: ~8 visible */
+@media (min-width: 1440px) { .anime-card { width: 11vw; } }
