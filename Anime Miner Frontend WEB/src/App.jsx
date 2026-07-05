@@ -128,6 +128,27 @@ function App() {
     setAvailableEpisodes(baseEps);
     
     const searchTitle = anime.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    
+    // Fetch from AniList for accurate ongoing episode counts
+    let anilistEpCount = 0;
+    try {
+        const aniRes = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query: '{ Media(search: "' + anime.title.replace(/"/g, '\\"') + '", type: ANIME) { episodes nextAiringEpisode { episode } } }'
+            })
+        });
+        const aniData = await aniRes.json();
+        const media = aniData?.data?.Media;
+        if (media) {
+            anilistEpCount = media.episodes || (media.nextAiringEpisode ? media.nextAiringEpisode.episode - 1 : 0);
+        }
+    } catch (e) {
+        console.error("AniList fetch failed", e);
+    }
+
+    // Fetch from Supabase
     const { data } = await supabase
       .from('anime_links')
       .select('episode')
@@ -135,12 +156,15 @@ function App() {
       .order('episode', { ascending: false })
       .limit(1);
       
+    let maxDbEp = 0;
     if (data && data.length > 0) {
-       const maxDbEp = data[0].episode;
-       if (maxDbEp > (anime.ep_count || 0)) {
-           setAvailableEpisodes(Array.from({length: maxDbEp}, (_, i) => i + 1));
-       }
+       maxDbEp = data[0].episode;
     }
+
+    const ultimateEps = Math.max(anime.ep_count === '?' ? 0 : (anime.ep_count || 12), anilistEpCount, maxDbEp);
+    
+    setAvailableEpisodes(Array.from({length: ultimateEps}, (_, i) => i + 1));
+    setSelectedAnime(prev => ({ ...prev, ep_count: ultimateEps }));
   };
 
   const closePlayer = () => {
