@@ -247,6 +247,9 @@ function App() {
       }
     } catch(err) {
       setStreamError(true);
+      // Automatically ping the Vercel Proxy to wake up the Ronin API miner
+      fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(title)}&episode=${epNum}`)
+        .catch(e => console.error("Failed to trigger miner", e));
     } finally {
       setIsLoadingStream(false);
     }
@@ -433,10 +436,10 @@ function App() {
       {/* Premium Video Player Page (Styled to Match Theme and Interactive) */}
       {selectedAnime && (
         <div className="player-page" style={{backgroundColor: 'var(--color-base)'}}>
-          <div className="player-header bg-surface border-b border-white/5">
-            <h2 className="text-2xl font-bold tracking-tight">{selectedAnime.title} {activeEpisode ? <span className="text-accent">- Episode {activeEpisode}</span> : ''}</h2>
-            <button className="bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-2 rounded-lg transition-colors border-none cursor-pointer" onClick={closePlayer}>
-              ✕ Close Player
+          <div className="player-header">
+            <h2>{selectedAnime.title}{activeEpisode ? <span className="text-accent"> · Ep {activeEpisode}</span> : ''}</h2>
+            <button className="bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors border-none cursor-pointer" onClick={closePlayer}>
+              ✕ Close
             </button>
           </div>
           
@@ -450,8 +453,8 @@ function App() {
                   </div>
                 ) : streamError ? (
                   <div className="p2p-state error-state">
-                    <h3 className="text-2xl font-bold text-accent mb-2">Stream Not Found</h3>
-                    <p className="text-zinc-400">Our miners haven't archived this episode yet. Please check back later.</p>
+                    <h3 className="text-2xl font-bold text-accent mb-2">Extracting Episode...</h3>
+                    <p className="text-zinc-400">Our miners have been deployed to extract this episode. Please check back in a few minutes.</p>
                   </div>
                 ) : activeStreamFormat === 'torrent' ? (
                   <div className="p2p-state">
@@ -469,83 +472,80 @@ function App() {
               </div>
 
               {/* Server Switchers */}
-              <div className="flex flex-wrap items-center gap-4 py-6 px-10 bg-surface border-y border-white/5 shadow-2xl">
-                <span className="text-sm text-zinc-400 font-bold uppercase tracking-[0.2em] mr-4">Extraction Servers</span>
-                <div className="w-px h-6 bg-white/10 mr-2" />
+              <div className="server-bar">
+                <span className="server-bar-label">Servers</span>
                 {availableStreams['http-sub'] && (
-                  <button className={`ep-btn hover:-translate-y-1 ${activeStreamFormat === 'http-sub' ? 'active shadow-[0_0_15px_var(--color-accent)]' : ''}`} onClick={() => setActiveStreamFormat('http-sub')}>
-                    HTTP (Sub)
+                  <button className={`ep-btn ${activeStreamFormat === 'http-sub' ? 'active' : ''}`} onClick={() => setActiveStreamFormat('http-sub')} style={{width:'auto',padding:'0.35rem 0.8rem'}}>
+                    Sub
                   </button>
                 )}
                 {availableStreams['http-dub'] && (
-                  <button className={`ep-btn hover:-translate-y-1 ${activeStreamFormat === 'http-dub' ? 'active shadow-[0_0_15px_var(--color-accent)]' : ''}`} onClick={() => setActiveStreamFormat('http-dub')}>
-                    HTTP (Dub)
+                  <button className={`ep-btn ${activeStreamFormat === 'http-dub' ? 'active' : ''}`} onClick={() => setActiveStreamFormat('http-dub')} style={{width:'auto',padding:'0.35rem 0.8rem'}}>
+                    Dub
                   </button>
                 )}
                 {availableStreams['torrent'] && (
-                  <button className={`flex items-center gap-2 ep-btn hover:-translate-y-1 ${activeStreamFormat === 'torrent' ? 'active shadow-[0_0_15px_var(--color-accent)]' : 'text-accent border-accent/30'}`} onClick={() => setActiveStreamFormat('torrent')}>
-                    <HardDriveDownload size={18} /> P2P Torrent
+                  <button className={`ep-btn flex items-center gap-1 ${activeStreamFormat === 'torrent' ? 'active' : 'text-accent'}`} onClick={() => setActiveStreamFormat('torrent')} style={{width:'auto',padding:'0.35rem 0.8rem'}}>
+                    <HardDriveDownload size={14} /> P2P
                   </button>
                 )}
               </div>
             </div>
           ) : (
-            <div className="flex gap-10 p-16 bg-surface">
-               <img src={selectedAnime.image} alt={selectedAnime.title} className="w-[220px] h-[320px] object-cover flex-shrink-0 rounded-2xl shadow-2xl shadow-black/50" />
-               <div className="flex flex-col justify-center">
-                  <h3 className="text-3xl font-black mb-4 text-white drop-shadow-md">{selectedAnime.title}</h3>
-                  <div className="flex items-center gap-4 mb-8 text-lg text-zinc-400 font-bold">
-                     <span className="flex items-center gap-2 text-white bg-accent/20 px-3 py-1 rounded text-accent">★ {selectedAnime.score || 'N/A'}</span>
-                     <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-                     <span>{selectedAnime.ep_count} Episodes</span>
+            <div className="anime-info-panel">
+               <img src={selectedAnime.image} alt={selectedAnime.title} />
+               <div className="info-text flex flex-col justify-center">
+                  <h3>{selectedAnime.title}</h3>
+                  <div className="flex flex-wrap items-center gap-3 mb-3" style={{fontSize:'clamp(0.75rem,2vw,0.9rem)',color:'#a1a1aa',fontWeight:700}}>
+                     <span style={{color:'var(--color-accent)',background:'rgba(230,52,98,0.15)',padding:'0.15rem 0.5rem',borderRadius:'4px'}}>★ {selectedAnime.score || 'N/A'}</span>
+                     <span>{selectedAnime.ep_count} Eps</span>
                   </div>
-                  <p className="text-[15px] text-zinc-300 leading-[1.8] max-w-[900px] mb-10">
-                    {selectedAnime.synopsis || "Welcome to the decentralized network. Select an episode from the list below to connect to the P2P swarm and begin streaming instantly."}
+                  <p>
+                    {selectedAnime.synopsis || "Select an episode below to begin streaming."}
                   </p>
                </div>
             </div>
           )}
           
           {availableEpisodes.length > 100 && (
-            <div className="flex gap-3 py-6 px-10 overflow-x-auto border-b border-white/5 bg-base">
+            <div className="range-bar">
               {Array.from({ length: Math.ceil(availableEpisodes.length / 100) }).map((_, idx) => (
                 <button 
                   key={idx}
-                  className={`ep-btn hover:bg-white/10 ${activeEpRange === idx ? 'active shadow-[0_0_10px_var(--color-accent)]' : ''}`}
+                  className={`range-btn ${activeEpRange === idx ? 'active' : ''}`}
                   onClick={() => setActiveEpRange(idx)}
                 >
-                  Eps {idx * 100 + 1}-{Math.min((idx + 1) * 100, availableEpisodes.length)}
+                  {idx * 100 + 1}–{Math.min((idx + 1) * 100, availableEpisodes.length)}
                 </button>
               ))}
             </div>
           )}
           
-          <div className="flex flex-wrap gap-3 py-10 px-10 bg-base items-center">
+          <div className="episode-grid">
             {availableEpisodes.slice(activeEpRange * 100, (activeEpRange + 1) * 100).map(ep => (
               <button 
                 key={ep} 
-                className={`ep-btn hover:-translate-y-1 transition-transform ${ep === activeEpisode ? 'active shadow-[0_0_15px_var(--color-accent)] scale-110' : ''}`}
+                className={`ep-btn ${ep === activeEpisode ? 'active' : ''}`}
                 onClick={() => handleEpisodeChange(ep)}
               >
-                Ep {ep}
+                {ep}
               </button>
             ))}
-            
-            <div className="ml-4 flex items-center gap-2">
-              <span className="text-zinc-400 font-bold text-sm uppercase tracking-wider">Missing Ep?</span>
-              <input 
-                type="number" 
-                min="1"
-                placeholder="e.g. 1100"
-                className="bg-zinc-800 text-white px-3 py-2 w-[100px] rounded border border-zinc-700 outline-none focus:border-accent text-sm"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && e.target.value) {
-                    handleEpisodeChange(parseInt(e.target.value));
-                    e.target.value = '';
-                  }
-                }}
-              />
-            </div>
+          </div>
+
+          <div className="missing-ep-row">
+            <span>Jump to Ep:</span>
+            <input 
+              type="number" 
+              min="1"
+              placeholder="e.g. 1100"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.value) {
+                  handleEpisodeChange(parseInt(e.target.value));
+                  e.target.value = '';
+                }
+              }}
+            />
           </div>
         </div>
       )}

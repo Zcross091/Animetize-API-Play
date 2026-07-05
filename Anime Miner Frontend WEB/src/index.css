@@ -12,41 +12,69 @@
   --font-mono: "JetBrains Mono", monospace;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   background-color: var(--color-base);
   color: white;
   font-family: var(--font-sans);
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-/* Hide scrollbar for carousels */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+/* ─── Scrollbar ─── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Original Video Player Specific CSS for backwards compatibility with App.jsx */
+/* ─── Player Page ─── */
 .player-page {
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
   background-color: var(--color-base);
   z-index: 100;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* ─── Player Header ─── */
 .player-header {
-  padding: 1rem 5%;
+  padding: 0.75rem 4%;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   background: var(--color-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-wrap: wrap;
 }
+.player-header h2 {
+  font-size: clamp(0.9rem, 3vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-header button {
+  flex-shrink: 0;
+  font-size: clamp(0.75rem, 2vw, 0.9rem);
+  padding: 0.4rem 0.9rem;
+  white-space: nowrap;
+}
+
+/* ─── Video Wrapper ─── */
 .video-wrapper {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -54,69 +82,222 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  max-height: 60vh;
 }
 .video-wrapper iframe {
   width: 100%;
   height: 100%;
   border: none;
 }
+
+/* ─── States ─── */
 .p2p-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding: 1rem;
+  gap: 0.5rem;
 }
+.p2p-state h3 {
+  font-size: clamp(1rem, 4vw, 1.8rem);
+}
+.p2p-state p {
+  font-size: clamp(0.8rem, 2.5vw, 1rem);
+  max-width: 480px;
+}
+
+/* ─── Anime Info Panel ─── */
+.anime-info-panel {
+  display: flex;
+  gap: 1.25rem;
+  padding: 1.25rem 4%;
+  background: var(--color-surface);
+}
+.anime-info-panel img {
+  width: clamp(80px, 18vw, 160px);
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  flex-shrink: 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.anime-info-panel .info-text h3 {
+  font-size: clamp(1rem, 3.5vw, 1.8rem);
+  font-weight: 900;
+  margin-bottom: 0.5rem;
+}
+.anime-info-panel .info-text p {
+  font-size: clamp(0.75rem, 2vw, 0.875rem);
+  line-height: 1.7;
+  color: #a1a1aa;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Server Switcher Bar ─── */
+.server-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 4%;
+  background: var(--color-surface);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.server-bar-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #71717a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ─── Range Selector Bar ─── */
+.range-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 4%;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: var(--color-base);
+}
+.range-bar::-webkit-scrollbar { height: 2px; }
+.range-bar::-webkit-scrollbar-track { background: transparent; }
+.range-bar::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 2px; }
+
+/* ─── Episode Grid ─── */
+.episode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 0.4rem;
+  padding: 0.75rem 4%;
+  background: var(--color-base);
+}
+@media (max-width: 480px) {
+  .episode-grid {
+    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    gap: 0.3rem;
+  }
+}
+
+/* ─── Missing Ep Input ─── */
+.missing-ep-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 4%;
+  background: var(--color-base);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.missing-ep-row span {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #71717a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.missing-ep-row input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  padding: 0.35rem 0.6rem;
+  width: 90px;
+  border-radius: 6px;
+  outline: none;
+  font-size: 0.8rem;
+  transition: border-color 0.2s;
+}
+.missing-ep-row input:focus {
+  border-color: var(--color-accent);
+}
+
+/* ─── Episode Button ─── */
+.ep-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: white;
+  padding: 0.35rem 0.25rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: clamp(0.65rem, 2vw, 0.8rem);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1;
+  width: 100%;
+  font-family: var(--font-sans);
+}
+.ep-btn:hover { background: rgba(255,255,255,0.12); transform: translateY(-1px); }
+.ep-btn.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px rgba(230,52,98,0.5);
+  transform: scale(1.05);
+}
+
+/* ─── Range Button ─── */
+.range-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  transition: all 0.18s;
+  flex-shrink: 0;
+}
+.range-btn:hover { background: rgba(255,255,255,0.12); }
+.range-btn.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 10px rgba(230,52,98,0.4);
+}
+
+/* ─── Utility Buttons ─── */
 .magnet-btn {
   background: var(--color-accent);
   color: white;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
   text-decoration: none;
   font-weight: bold;
   transition: all 0.2s ease;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
 }
-.magnet-btn:hover {
-  background: var(--color-accent-hover);
-  transform: scale(1.05);
-}
-.ep-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.ep-btn:hover {
-  background: rgba(255,255,255,0.1);
-}
-.ep-btn.active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-.episode-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 2rem 5%;
-}
+.magnet-btn:hover { background: var(--color-accent-hover); transform: scale(1.05); }
+
 .watch-btn {
   background: var(--color-accent);
   color: white;
   border: none;
-  padding: 1rem 2rem;
-  border-radius: 6px;
+  padding: 0.85rem 1.75rem;
+  border-radius: 8px;
   font-weight: bold;
   font-family: inherit;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.1rem;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
   transition: background-color 0.2s;
 }
-.watch-btn:hover {
-  background: var(--color-accent-hover);
+.watch-btn:hover { background: var(--color-accent-hover); }
+
+/* ─── Episode Selector (legacy compat) ─── */
+.episode-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 1rem 4%;
 }
