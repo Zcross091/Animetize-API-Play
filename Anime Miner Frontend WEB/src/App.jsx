@@ -496,7 +496,7 @@ function App() {
             </div>
           )}
           
-          <div className="flex flex-wrap gap-3 py-10 px-10 bg-base">
+          <div className="flex flex-wrap gap-3 py-10 px-10 bg-base items-center">
             {availableEpisodes.slice(activeEpRange * 100, (activeEpRange + 1) * 100).map(ep => (
               <button 
                 key={ep} 
@@ -506,6 +506,22 @@ function App() {
                 Ep {ep}
               </button>
             ))}
+            
+            <div className="ml-4 flex items-center gap-2">
+              <span className="text-zinc-400 font-bold text-sm uppercase tracking-wider">Missing Ep?</span>
+              <input 
+                type="number" 
+                min="1"
+                placeholder="e.g. 1100"
+                className="bg-zinc-800 text-white px-3 py-2 w-[100px] rounded border border-zinc-700 outline-none focus:border-accent text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.target.value) {
+                    handleEpisodeChange(parseInt(e.target.value));
+                    e.target.value = '';
+                  }
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
