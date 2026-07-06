@@ -26,6 +26,7 @@ function App() {
   
   const [availableStreams, setAvailableStreams] = useState({});
   const [activeStreamFormat, setActiveStreamFormat] = useState(null);
+  const [theaterMode, setTheaterMode] = useState(false);
   
   const [activeTab, setActiveTab] = useState('discover');
   const [watchHistory, setWatchHistory] = useState(() => {
@@ -433,119 +434,136 @@ function App() {
         </>
       )}
 
-      {/* Premium Video Player Page (Styled to Match Theme and Interactive) */}
+      {/* YouTube-style Player */}
       {selectedAnime && (
-        <div className="player-page" style={{backgroundColor: 'var(--color-base)'}}>
+        <div className={`player-page ${theaterMode ? 'theater' : ''}`}>
+
+          {/* ── Header Bar ── */}
           <div className="player-header">
             <h2>{selectedAnime.title}{activeEpisode ? <span className="text-accent"> · Ep {activeEpisode}</span> : ''}</h2>
-            <button className="bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors border-none cursor-pointer" onClick={closePlayer}>
-              ✕ Close
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Theater toggle */}
+              <button
+                onClick={() => setTheaterMode(t => !t)}
+                title={theaterMode ? 'Exit Theater' : 'Theater Mode'}
+                className="border-none cursor-pointer text-zinc-400 hover:text-white transition-colors bg-transparent px-2 py-1 rounded"
+                style={{fontSize:'1.1rem'}}
+              >
+                {theaterMode ? '⊡' : '⛶'}
+              </button>
+              <button className="bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors border-none cursor-pointer" onClick={closePlayer}>
+                ✕ Close
+              </button>
+            </div>
           </div>
-          
-          {isPlaying ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+
+          {/* ── Main Content: Video + Sidebar ── */}
+          <div className="player-body">
+
+            {/* ── Left: Video Column ── */}
+            <div className="player-left">
+
+              {/* Video Box */}
               <div className="video-wrapper shadow-2xl">
                 {isLoadingStream ? (
                   <div className="p2p-state">
-                    <Loader2 size={48} className="animate-spin text-accent mb-4" />
-                    <h3 className="text-2xl font-bold">Connecting to Swarm...</h3>
+                    <Loader2 size={36} className="animate-spin text-accent mb-3" />
+                    <h3>Connecting to Swarm...</h3>
                   </div>
                 ) : streamError ? (
                   <div className="p2p-state error-state">
-                    <h3 className="text-2xl font-bold text-accent mb-2">Extracting Episode...</h3>
-                    <p className="text-zinc-400">Our miners have been deployed to extract this episode. Please check back in a few minutes.</p>
+                    <h3 style={{color:'var(--color-accent)'}}>Extracting Episode...</h3>
+                    <p>Our miners have been deployed. Check back in a few minutes.</p>
                   </div>
                 ) : activeStreamFormat === 'torrent' ? (
                   <div className="p2p-state">
-                    <h3 className="text-3xl font-black mb-4">Decentralized Stream Ready</h3>
-                    <p className="text-zinc-400 mb-8 max-w-2xl leading-relaxed">
-                      To bypass browser sandbox limits and stream ultra high-quality <code className="bg-white/10 px-2 py-1 rounded">.mkv</code> files without ads or buffering, you must use a dedicated P2P client.
-                    </p>
-                    <a href={availableStreams['torrent']} target="_blank" rel="noopener noreferrer" className="bg-accent hover:bg-accent-hover hover:scale-105 transition-all text-white font-black px-10 py-4 rounded-xl shadow-[0_0_30px_rgba(230,52,98,0.4)] no-underline flex items-center gap-3 text-lg">
-                      <Play size={24} fill="white" /> Launch WebTorrent Desktop
+                    <h3>Decentralized Stream Ready</h3>
+                    <p style={{color:'#a1a1aa',maxWidth:'480px',margin:'0.5rem 0 1rem'}}>Use a P2P client to stream ad-free high-quality video.</p>
+                    <a href={availableStreams['torrent']} target="_blank" rel="noopener noreferrer" className="magnet-btn flex items-center gap-2">
+                      <Play size={18} fill="white" /> Launch WebTorrent
                     </a>
                   </div>
                 ) : activeStreamFormat && activeStreamFormat.startsWith('http') ? (
-                  <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" title="Anime Player"></iframe>
-                ) : null}
-              </div>
-
-              {/* Server Switchers */}
-              <div className="server-bar">
-                <span className="server-bar-label">Servers</span>
-                {availableStreams['http-sub'] && (
-                  <button className={`ep-btn ${activeStreamFormat === 'http-sub' ? 'active' : ''}`} onClick={() => setActiveStreamFormat('http-sub')} style={{width:'auto',padding:'0.35rem 0.8rem'}}>
-                    Sub
-                  </button>
-                )}
-                {availableStreams['http-dub'] && (
-                  <button className={`ep-btn ${activeStreamFormat === 'http-dub' ? 'active' : ''}`} onClick={() => setActiveStreamFormat('http-dub')} style={{width:'auto',padding:'0.35rem 0.8rem'}}>
-                    Dub
-                  </button>
-                )}
-                {availableStreams['torrent'] && (
-                  <button className={`ep-btn flex items-center gap-1 ${activeStreamFormat === 'torrent' ? 'active' : 'text-accent'}`} onClick={() => setActiveStreamFormat('torrent')} style={{width:'auto',padding:'0.35rem 0.8rem'}}>
-                    <HardDriveDownload size={14} /> P2P
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="anime-info-panel">
-               <img src={selectedAnime.image} alt={selectedAnime.title} />
-               <div className="info-text flex flex-col justify-center">
-                  <h3>{selectedAnime.title}</h3>
-                  <div className="flex flex-wrap items-center gap-3 mb-3" style={{fontSize:'clamp(0.75rem,2vw,0.9rem)',color:'#a1a1aa',fontWeight:700}}>
-                     <span style={{color:'var(--color-accent)',background:'rgba(230,52,98,0.15)',padding:'0.15rem 0.5rem',borderRadius:'4px'}}>★ {selectedAnime.score || 'N/A'}</span>
-                     <span>{selectedAnime.ep_count} Eps</span>
+                  <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" title="Anime Player" />
+                ) : (
+                  // Not playing yet — show anime info
+                  <div className="anime-info-panel" style={{width:'100%',background:'transparent',padding:'1rem 0'}}>
+                    <img src={selectedAnime.image} alt={selectedAnime.title} />
+                    <div className="info-text flex flex-col justify-center">
+                      <h3>{selectedAnime.title}</h3>
+                      <div className="flex flex-wrap items-center gap-3 mb-2" style={{fontSize:'0.85rem',color:'#a1a1aa',fontWeight:700}}>
+                        <span style={{color:'var(--color-accent)'}}> ★ {selectedAnime.score || 'N/A'}</span>
+                        <span>{selectedAnime.ep_count} Eps</span>
+                      </div>
+                      <p>{selectedAnime.synopsis || 'Select an episode to begin streaming.'}</p>
+                    </div>
                   </div>
-                  <p>
-                    {selectedAnime.synopsis || "Select an episode below to begin streaming."}
-                  </p>
-               </div>
-            </div>
-          )}
-          
-          {availableEpisodes.length > 100 && (
-            <div className="range-bar">
-              {Array.from({ length: Math.ceil(availableEpisodes.length / 100) }).map((_, idx) => (
-                <button 
-                  key={idx}
-                  className={`range-btn ${activeEpRange === idx ? 'active' : ''}`}
-                  onClick={() => setActiveEpRange(idx)}
-                >
-                  {idx * 100 + 1}–{Math.min((idx + 1) * 100, availableEpisodes.length)}
-                </button>
-              ))}
-            </div>
-          )}
-          
-          <div className="episode-grid">
-            {availableEpisodes.slice(activeEpRange * 100, (activeEpRange + 1) * 100).map(ep => (
-              <button 
-                key={ep} 
-                className={`ep-btn ${ep === activeEpisode ? 'active' : ''}`}
-                onClick={() => handleEpisodeChange(ep)}
-              >
-                {ep}
-              </button>
-            ))}
-          </div>
+                )}
+              </div>
 
-          <div className="missing-ep-row">
-            <span>Jump to Ep:</span>
-            <input 
-              type="number" 
-              min="1"
-              placeholder="e.g. 1100"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.target.value) {
-                  handleEpisodeChange(parseInt(e.target.value));
-                  e.target.value = '';
-                }
-              }}
-            />
+              {/* Server Switcher — only when streams exist */}
+              {(availableStreams['http-sub'] || availableStreams['http-dub'] || availableStreams['torrent']) && (
+                <div className="server-bar">
+                  <span className="server-bar-label">Audio</span>
+                  {availableStreams['http-sub'] && (
+                    <button className={`ep-btn ${activeStreamFormat === 'http-sub' ? 'active' : ''}`} onClick={() => setActiveStreamFormat('http-sub')} style={{width:'auto',padding:'0.3rem 0.75rem'}}>Sub</button>
+                  )}
+                  {availableStreams['http-dub'] && (
+                    <button className={`ep-btn ${activeStreamFormat === 'http-dub' ? 'active' : ''}`} onClick={() => setActiveStreamFormat('http-dub')} style={{width:'auto',padding:'0.3rem 0.75rem'}}>Dub</button>
+                  )}
+                  {availableStreams['torrent'] && (
+                    <button className={`ep-btn flex items-center gap-1 ${activeStreamFormat === 'torrent' ? 'active' : 'text-accent'}`} onClick={() => setActiveStreamFormat('torrent')} style={{width:'auto',padding:'0.3rem 0.75rem'}}>
+                      <HardDriveDownload size={13} /> P2P
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── Right: Episode Sidebar ── */}
+            <div className="player-sidebar">
+              <div className="sidebar-header">
+                <span>Episodes</span>
+                {availableEpisodes.length > 100 && (
+                  <select
+                    value={activeEpRange}
+                    onChange={e => setActiveEpRange(Number(e.target.value))}
+                    className="range-select"
+                  >
+                    {Array.from({ length: Math.ceil(availableEpisodes.length / 100) }).map((_, idx) => (
+                      <option key={idx} value={idx}>{idx * 100 + 1}–{Math.min((idx + 1) * 100, availableEpisodes.length)}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="episode-grid">
+                {availableEpisodes.slice(activeEpRange * 100, (activeEpRange + 1) * 100).map(ep => (
+                  <button
+                    key={ep}
+                    className={`ep-btn ${ep === activeEpisode ? 'active' : ''}`}
+                    onClick={() => handleEpisodeChange(ep)}
+                  >
+                    {ep}
+                  </button>
+                ))}
+              </div>
+
+              <div className="missing-ep-row">
+                <span>Jump:</span>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 1100"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value) {
+                      handleEpisodeChange(parseInt(e.target.value));
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
