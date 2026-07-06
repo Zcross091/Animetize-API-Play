@@ -211,12 +211,27 @@ function App() {
     setDownloadMagnetUrl(null);
 
     try {
-      const searchTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-      
+      // ─── Generate multiple normalized title variants ───
+      // Different sources (AniList vs miner) may store titles differently.
+      // We try all common variants in one query to avoid mismatches.
+      const buildVariants = (t) => {
+        const base = t.toLowerCase();
+        const withSpaces   = base.replace(/[^a-z0-9]+/g, ' ').trim();       // "one punch man"
+        const noSymbols    = base.replace(/[^a-z0-9\s]/g, '').replace(/\s+/g,' ').trim(); // same but explicit
+        const noSeason     = withSpaces.replace(/\s*(season|part)\s*\d+\s*$/i, '').trim();
+        const withHyphens  = base.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');        // "one-punch-man"
+
+        const subs = [...new Set([withSpaces, noSymbols, noSeason, withHyphens])];
+        const all  = [...subs, ...subs.map(s => `${s} dub`)];
+        return all;
+      };
+
+      const searchVariants = buildVariants(title);
+
       const { data: dbResList, error } = await supabase
         .from('anime_links')
         .select('title, url, type')
-        .in('title', [searchTitle, `${searchTitle} dub`])
+        .in('title', searchVariants)
         .eq('episode', parseInt(epNum));
         
       if (error || !dbResList || dbResList.length === 0) {
