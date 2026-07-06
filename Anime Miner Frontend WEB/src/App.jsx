@@ -223,28 +223,30 @@ function App() {
         throw new Error("Stream not found");
       }
       
-      let formats = { 'http-sub': null, 'http-dub': null, 'torrent': null };
+      let formats = {};
+      let subCount = 1;
+      let dubCount = 1;
 
       for (const dbRes of dbResList) {
-          if (dbRes.url.startsWith('magnet:')) {
-              formats['torrent'] = dbRes.url;
-          } else if (dbRes.title.endsWith(' dub')) {
-              formats['http-dub'] = dbRes.url;
-          } else {
-              formats['http-sub'] = dbRes.url;
-          }
+        if (dbRes.url.startsWith('magnet:')) {
+          formats['torrent'] = dbRes.url;
+        } else if (dbRes.title.endsWith(' dub')) {
+          formats[`dub-${dubCount}`] = dbRes.url;
+          dubCount++;
+        } else {
+          formats[`sub-${subCount}`] = dbRes.url;
+          subCount++;
+        }
       }
 
       setAvailableStreams(formats);
-      
-      if (formats['http-sub']) {
-          setActiveStreamFormat('http-sub');
-      } else if (formats['http-dub']) {
-          setActiveStreamFormat('http-dub');
-      } else if (formats['torrent']) {
-          setActiveStreamFormat('torrent');
+
+      // Auto-select first available
+      const firstKey = Object.keys(formats)[0];
+      if (firstKey) {
+        setActiveStreamFormat(firstKey);
       } else {
-          throw new Error("Unknown stream type");
+        throw new Error("Unknown stream type");
       }
     } catch(err) {
       setStreamError(true);
@@ -502,20 +504,26 @@ function App() {
               </div>
 
               {/* Server Switcher — only when streams exist */}
-              {(availableStreams['http-sub'] || availableStreams['http-dub'] || availableStreams['torrent']) && (
+              {Object.keys(availableStreams).length > 0 && (
                 <div className="server-bar">
-                  <span className="server-bar-label">Audio</span>
-                  {availableStreams['http-sub'] && (
-                    <button className={`ep-btn ${activeStreamFormat === 'http-sub' ? 'active' : ''}`} onClick={() => setActiveStreamFormat('http-sub')} style={{width:'auto',padding:'0.3rem 0.75rem'}}>Sub</button>
-                  )}
-                  {availableStreams['http-dub'] && (
-                    <button className={`ep-btn ${activeStreamFormat === 'http-dub' ? 'active' : ''}`} onClick={() => setActiveStreamFormat('http-dub')} style={{width:'auto',padding:'0.3rem 0.75rem'}}>Dub</button>
-                  )}
-                  {availableStreams['torrent'] && (
-                    <button className={`ep-btn flex items-center gap-1 ${activeStreamFormat === 'torrent' ? 'active' : 'text-accent'}`} onClick={() => setActiveStreamFormat('torrent')} style={{width:'auto',padding:'0.3rem 0.75rem'}}>
-                      <HardDriveDownload size={13} /> P2P
-                    </button>
-                  )}
+                  <span className="server-bar-label">Servers</span>
+                  {Object.entries(availableStreams).map(([key, url], idx) => {
+                    if (!url) return null;
+                    let label;
+                    if (key === 'torrent') label = <><HardDriveDownload size={13} /> P2P</>;
+                    else if (key.startsWith('dub-')) label = `Dub ${key.split('-')[1]}`;
+                    else label = `Server ${key.split('-')[1]}`;
+                    return (
+                      <button
+                        key={key}
+                        className={`ep-btn flex items-center gap-1 ${activeStreamFormat === key ? 'active' : key === 'torrent' ? 'text-accent' : ''}`}
+                        onClick={() => setActiveStreamFormat(key)}
+                        style={{width:'auto', padding:'0.3rem 0.75rem'}}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
