@@ -500,7 +500,7 @@ function App() {
                       <Play size={18} fill="white" /> Launch WebTorrent
                     </a>
                   </div>
-                ) : activeStreamFormat && activeStreamFormat.startsWith('http') ? (
+                ) : activeStreamFormat && availableStreams[activeStreamFormat]?.startsWith('http') ? (
                   <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" title="Anime Player" />
                 ) : (
                   // Not playing yet — show anime info
