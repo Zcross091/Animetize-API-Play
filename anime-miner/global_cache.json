@@ -3511,7 +3511,8 @@
     "highest_magnet_ep": 12
   },
   "liar game": {
-    "highest_magnet_ep": 13
+    "highest_magnet_ep": 13,
+    "highest_http_ep": 14
   },
   "liar game  - s01e": {
     "highest_magnet_ep": 11
@@ -5869,7 +5870,8 @@
     "highest_magnet_ep": 10
   },
   "the classroom of a black cat and a witch": {
-    "highest_magnet_ep": 12
+    "highest_magnet_ep": 12,
+    "highest_http_ep": 13
   },
   "the colors within    | kimi no iro": {
     "highest_magnet_ep": 1
@@ -6481,7 +6483,7 @@
     "highest_http_ep": 12
   },
   "the world is dancing": {
-    "highest_http_ep": 1
+    "highest_http_ep": 2
   },
   "medalist dub": {
     "highest_http_ep": 13
@@ -6898,5 +6900,74 @@
   },
   "love through a prism": {
     "highest_http_ep": 20
+  },
+  "oh boy was i wrong about her": {
+    "highest_http_ep": 1
+  },
+  "the forsaken saintess and her foodie roadtrip in another world": {
+    "highest_http_ep": 1
+  },
+  "a livid ladys guide to getting even how i crushed my homeland with my mighty grimoires": {
+    "highest_http_ep": 1
+  },
+  "the insipid princes furtive grab for the throne": {
+    "highest_http_ep": 1
+  },
+  "love unseen beneath the clear night sky": {
+    "highest_http_ep": 1
+  },
+  "azur lane slow ahead season 2": {
+    "highest_http_ep": 1
+  },
+  "goodbye lara": {
+    "highest_http_ep": 1
+  },
+  "one piece heroines": {
+    "highest_http_ep": 1
+  },
+  "sparks of tomorrow": {
+    "highest_http_ep": 1
+  },
+  "the 100 girlfriends who really really really really really love you season 3": {
+    "highest_http_ep": 1
+  },
+  "the worlds strongest rearguard": {
+    "highest_http_ep": 1
+  },
+  "iron wok jan": {
+    "highest_http_ep": 1
+  },
+  "you and i are polar opposites season 2": {
+    "highest_http_ep": 1
+  },
+  "lets go kaikigumi": {
+    "highest_http_ep": 1
+  },
+  "kai pai la guaishou da dianying": {
+    "highest_http_ep": 12
+  },
+  "senpai wa otokonoko movie ame nochi hare": {
+    "highest_http_ep": 4
+  },
+  "leviathan": {
+    "highest_http_ep": 12
+  },
+  "the rose of versailles movie": {
+    "highest_http_ep": 1
+  },
+  "new saga dub": {
+    "highest_http_ep": 10
+  },
+  "takopis original sin": {
+    "highest_http_ep": 6
+  },
+  "steinsgate": {
+    "highest_http_ep": 25
+  },
+  "rezero starting life in another world season 3 dub": {
+    "highest_http_ep": 15
+  },
+  "grand blue dreaming season 3": {
+    "highest_http_ep": 1
   }
 }

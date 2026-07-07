@@ -21,11 +21,11 @@ const BASE_URL = "https://gogoanime.or.at";
 const CACHE_FILE = './global_cache.json';
 
 // Master Override Switch: Set to true if you want to force-mine everything from scratch
-const IGNORE_CACHE = false; 
+const IGNORE_CACHE = false;
 
 let globalCache = {};
 if (fs.existsSync(CACHE_FILE)) {
-    try { globalCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8')); } catch(e){}
+    try { globalCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8')); } catch (e) { }
 }
 
 function saveCache() {
@@ -34,7 +34,7 @@ function saveCache() {
 
 async function runDumpMiner() {
     console.log("🚀 Starting OFFENSIVE HTTP Dump Miner (Gogoanime.or.at)...");
-    
+
     const browser = await puppeteer.launch({
         headless: false,
         args: [
@@ -54,10 +54,10 @@ async function runDumpMiner() {
         console.log(`======================================\n`);
 
         const page = await browser.newPage();
-        
+
         // Gogo clones usually paginate the homepage with ?page=X
         const pageUrl = currentPage === 1 ? BASE_URL : `${BASE_URL}/?page=${currentPage}`;
-        
+
         console.log(`   Scouting Timeline: ${pageUrl}`);
         try {
             await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -88,7 +88,7 @@ async function runDumpMiner() {
                 activeAnimeUrls.add(`https://gogoanime.or.at/anime/${match[1]}/`);
             }
         }
-        
+
         const uniqueSeries = Array.from(activeAnimeUrls);
         console.log(`   Found ${uniqueSeries.length} master series directly on the timeline...`);
 
@@ -109,20 +109,20 @@ async function runDumpMiner() {
 
             const seriesPage = await browser.newPage();
             let episodeLinks = [];
-            
+
             try {
                 await seriesPage.goto(masterSeriesUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-                
+
                 const slugBase = slugMatch ? slugMatch[1].split('-')[0] : '';
-                
+
                 episodeLinks = await seriesPage.evaluate((base) => {
                     const links = Array.from(document.querySelectorAll('a'));
                     return [...new Set(links.filter(l => l.href && l.href.includes('-episode-') && l.href.includes(base)).map(l => l.href))];
                 }, slugBase);
-            } catch(e) {
+            } catch (e) {
                 console.log(`   ⚠️ Failed to load Master Series page.`);
             }
-            
+
             await seriesPage.close();
 
             if (episodeLinks.length === 0) {
@@ -132,13 +132,13 @@ async function runDumpMiner() {
 
             // Reverse to mine Oldest -> Newest.
             episodeLinks = episodeLinks.reverse();
-            
+
             let highestMined = highestCachedEp;
             let minedCount = 0;
 
             for (let e = 0; e < episodeLinks.length; e++) {
                 const epLink = episodeLinks[e];
-                
+
                 let epTitle = "unknown";
                 let epNum = 0;
                 try {
@@ -149,22 +149,22 @@ async function runDumpMiner() {
                         const numMatch = parts[1].match(/^(\d+)/);
                         epNum = numMatch ? parseInt(numMatch[1]) : 1;
                     }
-                } catch(err){}
-                
+                } catch (err) { }
+
                 if (!IGNORE_CACHE && epNum <= highestCachedEp) {
                     continue; // Skip silently
                 }
-                
+
                 minedCount++;
                 console.log(`      🎬 Mining ${epTitle} Ep ${epNum}...`);
-                
+
                 const epPage = await browser.newPage();
-                
-                // Disable loading images/fonts to speed up scraping
+
+                // Disable loading images/fonts to speed up scraping (keep stylesheets to avoid breaking JS checks)
                 await epPage.setRequestInterception(true);
                 epPage.on('request', req => {
                     const rt = req.resourceType();
-                    if (['image', 'stylesheet', 'font', 'media'].includes(rt)) {
+                    if (['image', 'font', 'media'].includes(rt)) {
                         req.abort();
                     } else {
                         req.continue();
@@ -172,8 +172,9 @@ async function runDumpMiner() {
                 });
 
                 try {
-                    await epPage.goto(epLink, { waitUntil: 'domcontentloaded', timeout: 25000 });
-                    
+                    // Wait for networkidle2 so that client-side JS scripts can finish rendering the player
+                    await epPage.goto(epLink, { waitUntil: 'networkidle2', timeout: 25000 });
+
                     const iframeSrc = await epPage.evaluate(() => {
                         const iframes = Array.from(document.querySelectorAll('iframe'));
                         const player = iframes.find(i => i.src && (i.src.includes('.php?id=') || i.src.includes('newplayer') || i.src.includes('embed')));
@@ -197,10 +198,10 @@ async function runDumpMiner() {
                 } catch (err) {
                     console.log(`         ❌ Page timeout or error.`);
                 }
-                
+
                 await epPage.close();
             }
-            
+
             if (minedCount === 0) {
                 console.log(`   ⏭️ All episodes were already cached. Skipped.`);
             }
@@ -211,7 +212,7 @@ async function runDumpMiner() {
                 saveCache();
                 console.log(`   🗃️ CACHE: Updated highest HTTP episode for ${cleanTitle} to ${highestMined}`);
             }
-            
+
             console.log(`   🏁 Finished processing ${masterSeriesUrl}.`);
         }
 

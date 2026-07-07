@@ -1,7 +1,13 @@
 {
+  "name": "open-anime-api",
+  "version": "1.0.0",
+  "main": "start.js",
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
+    "axios": "^1.18.1",
+    "cheerio": "^1.2.0",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "puppeteer": "^25.3.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-adblocker": "^2.13.6",

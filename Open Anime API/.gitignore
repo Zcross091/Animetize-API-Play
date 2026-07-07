@@ -1,0 +1,5 @@
+node_modules/
+*.log
+local_db.json
+anime_links.json
+.env
