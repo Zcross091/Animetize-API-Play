@@ -501,7 +501,7 @@ function App() {
                     </a>
                   </div>
                 ) : activeStreamFormat && availableStreams[activeStreamFormat]?.startsWith('http') ? (
-                  <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin allow-forms" title="Anime Player" />
+                  <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" title="Anime Player" />
                 ) : (
                   // Not playing yet — show anime info
                   <div className="anime-info-panel" style={{width:'100%',background:'transparent',padding:'1rem 0'}}>
