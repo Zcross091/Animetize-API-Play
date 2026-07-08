@@ -1012,7 +1012,7 @@ function App() {
                           <span className="w-3 h-3 rounded-full bg-accent animate-pulse shadow-[0_0_15px_var(--color-accent)]" />
                           AniList #1 Trending
                         </span>
-                        <h1 className="text-5xl md:text-[72px] font-black leading-[0.95] tracking-tight mb-10 drop-shadow-2xl text-white line-clamp-2 md:line-clamp-3">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight mb-8 drop-shadow-2xl text-white line-clamp-2 md:line-clamp-3">
                           {heroAnime[currentHeroIndex].title}
                         </h1>
                         <div className="flex items-center gap-6 text-[15px] text-zinc-300 font-bold mb-8">
