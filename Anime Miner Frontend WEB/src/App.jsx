@@ -423,7 +423,7 @@ function App() {
         .eq('episode', parseInt(epNum));
         
       if (error || !dbResList || dbResList.length === 0) {
-        throw new Error("Stream not found");
+        throw new Error(error ? `SupabaseError: ${error.message}` : "Stream not found");
       }
       
       let formats = {};
@@ -452,10 +452,19 @@ function App() {
         throw new Error("Unknown stream type");
       }
     } catch(err) {
-      setStreamError(true);
-      // Automatically ping the Vercel Proxy to wake up the Ronin API miner
-      fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(title)}&episode=${epNum}`)
-        .catch(e => console.error("Failed to trigger miner", e));
+      console.warn("fetchStream caught error:", err);
+      const isBlocked = err.message?.toLowerCase().includes('failed to fetch') || 
+                        err.message?.toLowerCase().includes('network') || 
+                        err.message?.toLowerCase().includes('supabaseerror') ||
+                        !window.navigator.onLine;
+
+      setStreamError(isBlocked ? 'blocked' : 'notFound');
+
+      if (!isBlocked) {
+        // Automatically ping the Vercel Proxy to wake up the Ronin API miner
+        fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(title)}&episode=${epNum}`)
+          .catch(e => console.error("Failed to trigger miner", e));
+      }
     } finally {
       setIsLoadingStream(false);
     }
@@ -1355,6 +1364,16 @@ function App() {
                   <div className="p2p-state">
                     <Loader2 size={36} className="animate-spin text-accent mb-3" />
                     <h3>Connecting to Swarm...</h3>
+                  </div>
+                ) : streamError === 'blocked' ? (
+                  <div className="p2p-state error-state" style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+                    <h3 style={{color:'var(--color-accent)', marginBottom: '0.75rem'}}>Connection Blocked</h3>
+                    <p style={{color:'#d4d4d8', lineHeight: '1.6', marginBottom: '1.25rem'}}>
+                      We couldn't connect to the database. If you are using <strong>Brave Browser</strong> or an <strong>ad blocker</strong>, it is likely blocking our secure database connection.
+                    </p>
+                    <p style={{color:'#a1a1aa', fontSize: '0.85rem'}}>
+                      <strong>To fix this:</strong> Turn off Brave Shields (tap the Lion icon in the address bar and switch it off) or whitelist this domain in your ad blocker.
+                    </p>
                   </div>
                 ) : streamError ? (
                   <div className="p2p-state error-state">
