@@ -132,11 +132,17 @@ body {
   .player-body {
     flex-direction: column;
   }
+  .player-left {
+    flex: none;
+  }
   .player-sidebar {
     width: 100%;
     border-left: none;
     border-top: 1px solid rgba(255,255,255,0.05);
-    max-height: 40vh;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   .player-sidebar .episode-grid {
     grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
