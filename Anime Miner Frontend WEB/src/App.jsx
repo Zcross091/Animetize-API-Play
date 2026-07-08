@@ -69,10 +69,41 @@ function App() {
   const [scheduleTab, setScheduleTab] = useState('airing');
   const [scheduleAnime, setScheduleAnime] = useState([]);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
+  const [user, setUser] = useState(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [watchHistory, setWatchHistory] = useState(() => {
     const saved = localStorage.getItem('animeWatchHistory');
     return saved ? JSON.parse(saved) : [];
   });
+
+  useEffect(() => {
+    // Get active session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        syncWatchHistory(session.user);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        syncWatchHistory(session.user);
+      } else {
+        const saved = localStorage.getItem('animeWatchHistory');
+        setWatchHistory(saved ? JSON.parse(saved) : []);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Crunchyroll Redesign Data States
   const [heroAnime, setHeroAnime] = useState([]);
@@ -349,6 +380,19 @@ function App() {
       return updated;
     });
 
+    if (user) {
+      supabase.from('user_watch_history').upsert({
+        user_id: user.id,
+        title: selectedAnime.title,
+        image: selectedAnime.image,
+        ep_count: selectedAnime.ep_count,
+        last_ep: ep,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,title' }).then(({ error }) => {
+        if (error) console.error("Failed to sync episode to Supabase:", error.message);
+      });
+    }
+
     fetchStream(selectedAnime.title, ep);
   };
 
@@ -563,6 +607,102 @@ function App() {
       setIsLoadingSchedule(false);
     }
   };
+  const syncWatchHistory = async (currentUser) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_watch_history')
+        .select('title, image, ep_count, last_ep, updated_at')
+        .eq('user_id', currentUser.id);
+
+      if (error) {
+        console.warn("Could not sync from user_watch_history table:", error.message);
+        return;
+      }
+
+      if (data) {
+        const dbHistory = data.map(item => ({
+          title: item.title,
+          image: item.image,
+          ep_count: item.ep_count,
+          lastEp: item.last_ep,
+          timestamp: new Date(item.updated_at).getTime()
+        }));
+
+        const local = JSON.parse(localStorage.getItem('animeWatchHistory') || '[]');
+        const mergedMap = new Map();
+
+        local.forEach(item => mergedMap.set(item.title, item));
+        dbHistory.forEach(dbItem => {
+          const localItem = mergedMap.get(dbItem.title);
+          if (!localItem || dbItem.timestamp > localItem.timestamp) {
+            mergedMap.set(dbItem.title, dbItem);
+          }
+        });
+
+        const mergedList = Array.from(mergedMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+        setWatchHistory(mergedList);
+        localStorage.setItem('animeWatchHistory', JSON.stringify(mergedList));
+
+        for (const item of mergedList) {
+          await supabase.from('user_watch_history').upsert({
+            user_id: currentUser.id,
+            title: item.title,
+            image: item.image,
+            ep_count: item.ep_count,
+            last_ep: item.lastEp,
+            updated_at: new Date(item.timestamp).toISOString()
+          }, { onConflict: 'user_id,title' });
+        }
+      }
+    } catch (err) {
+      console.error("Sync watch history failed:", err);
+    }
+  };
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+
+    try {
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+        if (data?.user && !data?.session) {
+          setAuthError("Check your email for the confirmation link!");
+        } else if (data?.user) {
+          setUser(data.user);
+          setAuthModalOpen(false);
+          setAuthEmail('');
+          setAuthPassword('');
+        }
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+        if (data?.user) {
+          setUser(data.user);
+          setAuthModalOpen(false);
+          setAuthEmail('');
+          setAuthPassword('');
+        }
+      }
+    } catch (err) {
+      setAuthError(err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
   return (
     <div className="min-h-screen bg-base text-white pb-48 font-sans">
@@ -592,7 +732,45 @@ function App() {
                   />
                   <Search size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 </form>
-                <button className="p-3.5 bg-white/5 hover:bg-white/10 rounded-full transition-colors border-none cursor-pointer text-white"><User size={24} /></button>
+                <div className="relative">
+                  <button 
+                    onClick={() => {
+                      if (user) {
+                        setProfileDropdownOpen(!profileDropdownOpen);
+                      } else {
+                        setAuthModalOpen(true);
+                      }
+                    }}
+                    className="p-3.5 bg-white/5 hover:bg-white/10 rounded-full transition-colors border-none cursor-pointer text-white flex items-center justify-center"
+                  >
+                    {user ? (
+                      <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-xs font-black text-white uppercase">
+                        {user.email[0]}
+                      </div>
+                    ) : (
+                      <User size={24} />
+                    )}
+                  </button>
+
+                  {user && profileDropdownOpen && (
+                    <div className="absolute right-0 mt-3 w-64 bg-surface border border-white/10 rounded-2xl p-4 shadow-2xl z-50 flex flex-col gap-3 backdrop-blur-2xl">
+                      <div className="text-sm font-medium text-zinc-400 break-all px-2">
+                        Logged in as: <br />
+                        <span className="text-white font-bold">{user.email}</span>
+                      </div>
+                      <div className="w-full h-[1px] bg-white/5" />
+                      <button 
+                        onClick={() => {
+                          handleSignOut();
+                          setProfileDropdownOpen(false);
+                        }}
+                        className="w-full py-2.5 bg-accent/10 hover:bg-accent text-accent hover:text-white rounded-xl font-bold transition-all border-none cursor-pointer text-[14px]"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button className="p-3.5 bg-white/5 hover:bg-white/10 rounded-full transition-colors border-none cursor-pointer text-white md:hidden"><Menu size={24} /></button>
               </div>
             </div>
@@ -1017,6 +1195,78 @@ function App() {
                   }}
                 />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Authentication Modal */}
+      {authModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+          <div className="relative w-full max-w-md bg-surface/90 border border-white/10 p-10 rounded-3xl shadow-2xl flex flex-col gap-6 backdrop-blur-2xl">
+            <button 
+              onClick={() => setAuthModalOpen(false)}
+              className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-all border-none cursor-pointer"
+            >
+              ✕
+            </button>
+            <div className="text-center">
+              <h2 className="text-3xl font-black text-white mb-2">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+              <p className="text-[14px] text-zinc-400 font-medium">
+                {isSignUp ? 'Sign up to sync your progress across devices' : 'Log in to recover your watch list and history'}
+              </p>
+            </div>
+
+            <form onSubmit={handleAuthSubmit} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-zinc-400 tracking-wider uppercase">Email Address</label>
+                <input 
+                  type="email" 
+                  required
+                  placeholder="name@example.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-base text-zinc-200 focus:outline-none focus:border-accent/50 focus:bg-white/10 transition-all font-medium placeholder-zinc-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-zinc-400 tracking-wider uppercase">Password</label>
+                <input 
+                  type="password" 
+                  required
+                  placeholder="••••••••"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-base text-zinc-200 focus:outline-none focus:border-accent/50 focus:bg-white/10 transition-all font-medium placeholder-zinc-600"
+                />
+              </div>
+
+              {authError && (
+                <div className="text-sm font-bold text-accent bg-accent/10 border border-accent/20 rounded-xl py-2.5 px-4">
+                  {authError}
+                </div>
+              )}
+
+              <button 
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-3.5 bg-accent hover:bg-accent-hover text-white font-black text-base rounded-xl transition-all shadow-lg shadow-accent/20 border-none cursor-pointer flex items-center justify-center gap-2"
+              >
+                {authLoading ? <Loader2 size={20} className="animate-spin" /> : isSignUp ? 'SIGN UP' : 'LOG IN'}
+              </button>
+            </form>
+
+            <div className="text-center text-sm font-medium text-zinc-400 mt-2">
+              {isSignUp ? 'Already have an account?' : "Don't have an account yet?"}{' '}
+              <button 
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setAuthError('');
+                }}
+                className="bg-transparent border-none text-accent hover:underline font-bold cursor-pointer"
+              >
+                {isSignUp ? 'Log In' : 'Sign Up'}
+              </button>
             </div>
           </div>
         </div>
