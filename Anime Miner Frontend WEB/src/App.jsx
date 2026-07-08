@@ -416,14 +416,30 @@ function App() {
     try {
       const searchVariants = buildVariants(title);
 
-      const { data: dbResList, error } = await supabase
-        .from('anime_links')
-        .select('title, url, type')
-        .in('title', searchVariants)
-        .eq('episode', parseInt(epNum));
+      let dbResList = [];
+      let fetchError = null;
+
+      try {
+        const proxyUrl = `https://ronin-api-proxy.vercel.app/api/db?episode=${parseInt(epNum)}&searchVariants=${encodeURIComponent(JSON.stringify(searchVariants))}`;
+        const proxyRes = await fetch(proxyUrl);
+        if (proxyRes.ok) {
+          dbResList = await proxyRes.json();
+        } else {
+          throw new Error(`Proxy error: ${proxyRes.status}`);
+        }
+      } catch (proxyErr) {
+        console.warn("Proxy DB query failed, trying direct Supabase fallback...", proxyErr);
+        const { data, error } = await supabase
+          .from('anime_links')
+          .select('title, url, type')
+          .in('title', searchVariants)
+          .eq('episode', parseInt(epNum));
+        if (error) fetchError = error;
+        else dbResList = data;
+      }
         
-      if (error || !dbResList || dbResList.length === 0) {
-        throw new Error(error ? `SupabaseError: ${error.message}` : "Stream not found");
+      if (fetchError || !dbResList || dbResList.length === 0) {
+        throw new Error(fetchError ? `SupabaseError: ${fetchError.message}` : "Stream not found");
       }
       
       let formats = {};
