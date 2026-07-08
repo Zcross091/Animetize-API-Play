@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Play, Search, User, Menu, Loader2, HardDriveDownload, Sparkles, Flame, Clock, Trophy, Grid } from 'lucide-react';
+import { Play, Search, User, Menu, Loader2, HardDriveDownload, Sparkles, Flame, Clock, Trophy, Grid, ChevronLeft, ChevronRight } from 'lucide-react';
 import './index.css';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -403,6 +403,22 @@ function App() {
     }
 
     fetchStream(selectedAnime.title, ep);
+  };
+
+  const playPrevEpisode = () => {
+    if (!activeEpisode) return;
+    const currentIndex = availableEpisodes.indexOf(activeEpisode);
+    if (currentIndex > 0) {
+      handleEpisodeChange(availableEpisodes[currentIndex - 1]);
+    }
+  };
+
+  const playNextEpisode = () => {
+    if (!activeEpisode) return;
+    const currentIndex = availableEpisodes.indexOf(activeEpisode);
+    if (currentIndex < availableEpisodes.length - 1) {
+      handleEpisodeChange(availableEpisodes[currentIndex + 1]);
+    }
   };
 
   const fetchStream = async (title, epNum) => {
@@ -1460,17 +1476,35 @@ function App() {
             <div className="player-sidebar">
               <div className="sidebar-header">
                 <span>Episodes</span>
-                {availableEpisodes.length > 100 && (
-                  <select
-                    value={activeEpRange}
-                    onChange={e => setActiveEpRange(Number(e.target.value))}
-                    className="range-select"
+                <div className="flex items-center gap-1.5">
+                  <button 
+                    onClick={playPrevEpisode}
+                    disabled={!activeEpisode || availableEpisodes.indexOf(activeEpisode) <= 0}
+                    className="p-1.5 rounded bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/5 disabled:cursor-not-allowed text-white cursor-pointer transition-all hover:scale-105 active:scale-95 flex items-center justify-center"
+                    title="Previous Episode"
                   >
-                    {Array.from({ length: Math.ceil(availableEpisodes.length / 100) }).map((_, idx) => (
-                      <option key={idx} value={idx}>{idx * 100 + 1}–{Math.min((idx + 1) * 100, availableEpisodes.length)}</option>
-                    ))}
-                  </select>
-                )}
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button 
+                    onClick={playNextEpisode}
+                    disabled={!activeEpisode || availableEpisodes.indexOf(activeEpisode) >= availableEpisodes.length - 1}
+                    className="p-1.5 rounded bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/5 disabled:cursor-not-allowed text-white cursor-pointer transition-all hover:scale-105 active:scale-95 flex items-center justify-center"
+                    title="Next Episode"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                  {availableEpisodes.length > 100 && (
+                    <select
+                      value={activeEpRange}
+                      onChange={e => setActiveEpRange(Number(e.target.value))}
+                      className="range-select ml-1"
+                    >
+                      {Array.from({ length: Math.ceil(availableEpisodes.length / 100) }).map((_, idx) => (
+                        <option key={idx} value={idx}>{idx * 100 + 1}–{Math.min((idx + 1) * 100, availableEpisodes.length)}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div className="episode-grid">
