@@ -7,6 +7,25 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ─── Generate multiple normalized title variants ───
+// Different sources (AniList, Jikan, database) may store titles differently (e.g. hyphens, spaces, symbols).
+// We query all common variants to avoid mismatches.
+const buildVariants = (t) => {
+  if (!t) return [];
+  const base = t.toLowerCase().trim();
+  
+  const withSpaces  = base.replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const noSymbols   = base.replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+  const noSpaces    = withSpaces.replace(/\s+/g, '');
+  const noSeason    = withSpaces.replace(/\s*(season|part)\s*\d+\s*$/i, '').trim();
+  const withHyphens = withSpaces.replace(/\s+/g, '-');
+  const baseHyphenated = base.replace(/\s+/g, '-');
+
+  const subs = [...new Set([base, withSpaces, noSymbols, noSpaces, noSeason, withHyphens, baseHyphenated])];
+  const all  = [...subs, ...subs.map(s => `${s} dub`)];
+  return all;
+};
+
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -128,8 +147,6 @@ function App() {
     let baseEps = Array.from({length: anime.ep_count || 12}, (_, i) => i + 1);
     setAvailableEpisodes(baseEps);
     
-    const searchTitle = anime.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-    
     // Fetch from AniList for accurate ongoing episode counts
     let anilistEpCount = 0;
     try {
@@ -150,10 +167,11 @@ function App() {
     }
 
     // Fetch from Supabase
+    const searchVariants = buildVariants(anime.title);
     const { data } = await supabase
       .from('anime_links')
       .select('episode')
-      .in('title', [searchTitle, `${searchTitle} dub`])
+      .in('title', searchVariants)
       .order('episode', { ascending: false })
       .limit(1);
       
@@ -211,21 +229,6 @@ function App() {
     setDownloadMagnetUrl(null);
 
     try {
-      // ─── Generate multiple normalized title variants ───
-      // Different sources (AniList vs miner) may store titles differently.
-      // We try all common variants in one query to avoid mismatches.
-      const buildVariants = (t) => {
-        const base = t.toLowerCase();                                                         // "one-punch man"  ← exactly what miner stores
-        const withSpaces  = base.replace(/[^a-z0-9]+/g, ' ').trim();                        // "one punch man"
-        const noSymbols   = base.replace(/[^a-z0-9\s]/g, '').replace(/\s+/g,' ').trim();   // "one punch man"
-        const noSeason    = withSpaces.replace(/\s*(season|part)\s*\d+\s*$/i, '').trim();   // strips "Season 2" etc
-        const withHyphens = withSpaces.replace(/\s+/g, '-');                                 // "one-punch-man"
-
-        const subs = [...new Set([base, withSpaces, noSymbols, noSeason, withHyphens])];
-        const all  = [...subs, ...subs.map(s => `${s} dub`)];
-        return all;
-      };
-
       const searchVariants = buildVariants(title);
 
       const { data: dbResList, error } = await supabase
