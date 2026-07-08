@@ -120,10 +120,75 @@ function App() {
         // Fetch Top Romance (Genre ID 22)
         const romanceRes = await fetch('https://api.jikan.moe/v4/anime?genres=22&order_by=popularity&sort=asc&limit=15');
         const romanceData = await romanceRes.json();
+        if (!romanceData.data) throw new Error("Romance data undefined");
         setRomanceAnime(romanceData.data.map(mapJikanAnime));
 
       } catch (e) {
-        console.error("Failed to fetch home data", e);
+        console.warn("Failed to fetch home data from Jikan, trying AniList fallback...", e);
+        try {
+          const query = `
+            query {
+              trending: Page (page: 1, perPage: 15) {
+                media (type: ANIME, sort: TRENDING_DESC) {
+                  title { english romaji }
+                  coverImage { large }
+                  episodes
+                  averageScore
+                  description
+                }
+              }
+              action: Page (page: 1, perPage: 15) {
+                media (genre: "Action", type: ANIME, sort: POPULARITY_DESC) {
+                  title { english romaji }
+                  coverImage { large }
+                  episodes
+                  averageScore
+                  description
+                }
+              }
+              romance: Page (page: 1, perPage: 15) {
+                media (genre: "Romance", type: ANIME, sort: POPULARITY_DESC) {
+                  title { english romaji }
+                  coverImage { large }
+                  episodes
+                  averageScore
+                  description
+                }
+              }
+            }
+          `;
+          const res = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({ query })
+          });
+          const result = await res.json();
+          
+          const mapAni = media => ({
+            title: media.title.english || media.title.romaji,
+            image: media.coverImage.large,
+            ep_count: media.episodes || 12,
+            score: media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A',
+            synopsis: media.description ? media.description.replace(/<[^>]*>/g, '') : 'No synopsis available.'
+          });
+
+          if (result?.data?.trending?.media) {
+            const mappedTrending = result.data.trending.media.map(mapAni);
+            setHeroAnime(mappedTrending.slice(0, 5));
+            setTopAiring(mappedTrending.slice(5));
+          }
+          if (result?.data?.action?.media) {
+            setActionAnime(result.data.action.media.map(mapAni));
+          }
+          if (result?.data?.romance?.media) {
+            setRomanceAnime(result.data.romance.media.map(mapAni));
+          }
+        } catch (fallbackErr) {
+          console.error("AniList home fallback failed:", fallbackErr);
+        }
       }
     };
     fetchHomeData();
@@ -148,9 +213,55 @@ function App() {
     try {
       const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(searchTerm)}&limit=15`);
       const data = await res.json();
+      if (!data.data || data.data.length === 0) throw new Error("Search data empty");
       setSearchResults(data.data.map(mapJikanAnime));
     } catch (err) {
-      console.error(err);
+      console.warn("Jikan search failed, falling back to AniList search...", err);
+      try {
+        const query = `
+          query ($search: String) {
+            Page (page: 1, perPage: 15) {
+              media (search: $search, type: ANIME, sort: POPULARITY_DESC) {
+                title {
+                  english
+                  romaji
+                }
+                coverImage {
+                  large
+                }
+                episodes
+                averageScore
+                description
+              }
+            }
+          }
+        `;
+        const res = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            query,
+            variables: { search: searchTerm }
+          })
+        });
+        const result = await res.json();
+        const mediaList = result?.data?.Page?.media;
+        if (mediaList && mediaList.length > 0) {
+          const mapped = mediaList.map(media => ({
+            title: media.title.english || media.title.romaji,
+            image: media.coverImage.large,
+            ep_count: media.episodes || 12,
+            score: media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A',
+            synopsis: media.description ? media.description.replace(/<[^>]*>/g, '') : 'No synopsis available.'
+          }));
+          setSearchResults(mapped);
+        }
+      } catch (fallbackErr) {
+        console.error("AniList search fallback failed:", fallbackErr);
+      }
     } finally {
       setIsSearching(false);
     }
@@ -300,11 +411,58 @@ function App() {
     try {
       const res = await fetch(`https://api.jikan.moe/v4/anime?genres=${genre.id}&order_by=popularity&sort=asc&limit=24`);
       const data = await res.json();
-      if (data && data.data) {
+      if (data && data.data && data.data.length > 0) {
         setGenreAnime(data.data.map(mapJikanAnime));
+      } else {
+        throw new Error("Genre data empty");
       }
     } catch (err) {
-      console.error(err);
+      console.warn("Jikan genre fetch failed, trying AniList fallback...", err);
+      try {
+        const query = `
+          query ($genre: String) {
+            Page (page: 1, perPage: 24) {
+              media (genre: $genre, type: ANIME, sort: POPULARITY_DESC) {
+                title {
+                  english
+                  romaji
+                }
+                coverImage {
+                  large
+                }
+                episodes
+                averageScore
+                description
+              }
+            }
+          }
+        `;
+        const res = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            query,
+            variables: { genre: genre.name }
+          })
+        });
+        const result = await res.json();
+        const mediaList = result?.data?.Page?.media;
+        if (mediaList && mediaList.length > 0) {
+          const mapped = mediaList.map(media => ({
+            title: media.title.english || media.title.romaji,
+            image: media.coverImage.large,
+            ep_count: media.episodes || 12,
+            score: media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A',
+            synopsis: media.description ? media.description.replace(/<[^>]*>/g, '') : 'No synopsis available.'
+          }));
+          setGenreAnime(mapped);
+        }
+      } catch (fallbackErr) {
+        console.error("AniList genre fallback failed:", fallbackErr);
+      }
     } finally {
       setIsLoadingGenre(false);
     }
