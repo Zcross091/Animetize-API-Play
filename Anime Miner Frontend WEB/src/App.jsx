@@ -114,6 +114,7 @@ function App() {
   }, []);
 
   // Crunchyroll Redesign Data States
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [heroAnime, setHeroAnime] = useState([]);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [topAiring, setTopAiring] = useState([]);
@@ -889,9 +890,98 @@ function App() {
                     </div>
                   )}
                 </div>
-                <button className="p-3.5 bg-white/5 hover:bg-white/10 rounded-full transition-colors border-none cursor-pointer text-white md:hidden"><Menu size={24} /></button>
+                
+                {/* Mobile Search Icon */}
+                <button 
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="p-3.5 bg-white/5 hover:bg-white/10 rounded-full transition-colors border-none cursor-pointer text-white lg:hidden flex items-center justify-center"
+                  title="Search"
+                >
+                  <Search size={24} />
+                </button>
+
+                <button 
+                  onClick={() => setMobileMenuOpen(true)} 
+                  className="p-3.5 bg-white/5 hover:bg-white/10 rounded-full transition-colors border-none cursor-pointer text-white md:hidden"
+                >
+                  <Menu size={24} />
+                </button>
               </div>
             </div>
+
+            {/* Mobile Drawer Navigation Menu */}
+            {mobileMenuOpen && (
+              <div 
+                className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md md:hidden transition-all duration-300"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div 
+                  className="absolute top-0 right-0 h-full w-[300px] max-w-[85vw] bg-surface/95 border-l border-white/10 p-8 flex flex-col gap-8 shadow-2xl backdrop-blur-2xl transition-transform duration-300 translate-x-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-black text-accent tracking-tighter">RONIN</span>
+                    <button 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-all border-none cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Search Bar inside Drawer */}
+                  <form 
+                    onSubmit={(e) => {
+                      handleSearch(e);
+                      setMobileMenuOpen(false);
+                    }} 
+                    className="relative w-full"
+                  >
+                    <input 
+                      type="text" 
+                      placeholder="Search for an anime..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="bg-white/5 border border-white/10 rounded-full py-3.5 pl-6 pr-12 text-sm text-zinc-200 focus:outline-none focus:border-accent/50 focus:bg-white/10 w-full transition-all font-medium placeholder-zinc-500"
+                    />
+                    <button 
+                      type="submit" 
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-transparent border-none text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      <Search size={18} />
+                    </button>
+                  </form>
+
+                  {/* Navigation Links inside Drawer */}
+                  <div className="flex flex-col gap-6 text-[18px] font-bold text-zinc-400 mt-4">
+                    <button 
+                      className={`w-full text-left bg-transparent border-none cursor-pointer py-2 transition-colors ${activeTab === 'discover' ? 'text-accent' : 'hover:text-white'}`} 
+                      onClick={() => { setActiveTab('discover'); setMobileMenuOpen(false); }}
+                    >
+                      Home
+                    </button>
+                    <button 
+                      className={`w-full text-left bg-transparent border-none cursor-pointer py-2 transition-colors ${activeTab === 'mylist' ? 'text-accent' : 'hover:text-white'}`} 
+                      onClick={() => { setActiveTab('mylist'); setMobileMenuOpen(false); }}
+                    >
+                      My List
+                    </button>
+                    <button 
+                      className={`w-full text-left bg-transparent border-none cursor-pointer py-2 transition-colors ${activeTab === 'browse' ? 'text-accent' : 'hover:text-white'}`} 
+                      onClick={() => { setActiveTab('browse'); setSelectedGenre(null); setMobileMenuOpen(false); }}
+                    >
+                      Browse
+                    </button>
+                    <button 
+                      className={`w-full text-left bg-transparent border-none cursor-pointer py-2 transition-colors ${activeTab === 'schedule' ? 'text-accent' : 'hover:text-white'}`} 
+                      onClick={() => { setActiveTab('schedule'); handleScheduleTabChange('airing'); setMobileMenuOpen(false); }}
+                    >
+                      Schedule
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </nav>
 
           <main className="relative z-10">
