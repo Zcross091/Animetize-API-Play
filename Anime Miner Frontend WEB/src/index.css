@@ -98,6 +98,8 @@ body {
   flex-shrink: 0;
 }
 .player-sidebar .episode-grid {
+  display: grid;
+  align-content: start;
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
@@ -342,6 +344,13 @@ body {
   line-height: 1;
   width: 100%;
   font-family: var(--font-sans);
+}
+.episode-grid .ep-btn {
+  aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 .ep-btn:hover { background: rgba(255,255,255,0.12); transform: translateY(-1px); }
 .ep-btn.active {
