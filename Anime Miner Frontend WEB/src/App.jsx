@@ -26,6 +26,21 @@ const buildVariants = (t) => {
   return all;
 };
 
+const GENRES = [
+  { id: 1, name: 'Action', gradient: 'from-red-600 to-amber-600' },
+  { id: 2, name: 'Adventure', gradient: 'from-orange-500 to-yellow-500' },
+  { id: 4, name: 'Comedy', gradient: 'from-yellow-400 to-orange-400' },
+  { id: 8, name: 'Drama', gradient: 'from-purple-600 to-blue-600' },
+  { id: 10, name: 'Fantasy', gradient: 'from-emerald-500 to-teal-500' },
+  { id: 14, name: 'Horror', gradient: 'from-zinc-800 to-red-950' },
+  { id: 7, name: 'Mystery', gradient: 'from-indigo-900 to-purple-800' },
+  { id: 22, name: 'Romance', gradient: 'from-pink-500 to-rose-400' },
+  { id: 24, name: 'Sci-Fi', gradient: 'from-cyan-600 to-blue-700' },
+  { id: 36, name: 'Slice of Life', gradient: 'from-teal-400 to-emerald-400' },
+  { id: 37, name: 'Supernatural', gradient: 'from-violet-800 to-fuchsia-800' },
+  { id: 30, name: 'Sports', gradient: 'from-blue-500 to-cyan-500' },
+];
+
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -48,6 +63,9 @@ function App() {
   const [theaterMode, setTheaterMode] = useState(false);
   
   const [activeTab, setActiveTab] = useState('discover');
+  const [selectedGenre, setSelectedGenre] = useState(null);
+  const [genreAnime, setGenreAnime] = useState([]);
+  const [isLoadingGenre, setIsLoadingGenre] = useState(false);
   const [watchHistory, setWatchHistory] = useState(() => {
     const saved = localStorage.getItem('animeWatchHistory');
     return saved ? JSON.parse(saved) : [];
@@ -275,6 +293,22 @@ function App() {
       setIsLoadingStream(false);
     }
   };
+  const handleGenreClick = async (genre) => {
+    setSelectedGenre(genre);
+    setIsLoadingGenre(true);
+    setGenreAnime([]);
+    try {
+      const res = await fetch(`https://api.jikan.moe/v4/anime?genres=${genre.id}&order_by=popularity&sort=asc&limit=24`);
+      const data = await res.json();
+      if (data && data.data) {
+        setGenreAnime(data.data.map(mapJikanAnime));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingGenre(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-base text-white pb-48 font-sans">
@@ -288,7 +322,7 @@ function App() {
                 <div className="hidden md:flex items-center gap-10 text-[17px] font-bold text-zinc-400">
                   <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'discover' ? 'text-accent' : 'hover:text-white'}`} onClick={() => setActiveTab('discover')}>Home</button>
                   <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'mylist' ? 'text-accent' : 'hover:text-white'}`} onClick={() => setActiveTab('mylist')}>My List</button>
-                  <button className="bg-transparent border-none cursor-pointer hover:text-white transition-colors">Browse</button>
+                  <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'browse' ? 'text-accent' : 'hover:text-white'}`} onClick={() => { setActiveTab('browse'); setSelectedGenre(null); }}>Browse</button>
                   <button className="bg-transparent border-none cursor-pointer hover:text-white transition-colors">Schedule</button>
                 </div>
               </div>
@@ -347,6 +381,84 @@ function App() {
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+            ) : activeTab === 'browse' ? (
+              <div className="container mx-auto px-10 md:px-16 pt-40 pb-20">
+                {selectedGenre ? (
+                  <>
+                    <div className="flex items-center justify-between mb-12">
+                      <div className="flex items-center gap-5">
+                        <div className="w-2 h-10 bg-accent rounded-full shadow-[0_0_15px_var(--color-accent)]" />
+                        <h2 className="text-4xl font-black tracking-tight text-white drop-shadow-md">
+                          {selectedGenre.name} Anime
+                        </h2>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedGenre(null)}
+                        className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white rounded-full font-bold transition-all border border-white/10 hover:border-white/20 cursor-pointer"
+                      >
+                        ← Back to Genres
+                      </button>
+                    </div>
+
+                    {isLoadingGenre ? (
+                      <div className="text-xl text-zinc-400 animate-pulse font-bold flex items-center gap-3">
+                        <Loader2 size={24} className="animate-spin text-accent" />
+                        Loading {selectedGenre.name} anime...
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8">
+                        {genreAnime.map((anime, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => openAnime(anime)}
+                            className="group relative cursor-pointer"
+                          >
+                            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(230,52,98,0.25)]">
+                              <img src={anime.image} alt={anime.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent opacity-85 group-hover:opacity-95 transition-opacity duration-500" />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
+                                <div className="bg-accent p-4 rounded-full shadow-[0_0_20px_rgba(230,52,98,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
+                                  <Play size={20} fill="white" className="ml-0.5" />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-4 px-1">
+                              <h3 className="text-sm font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{anime.title}</h3>
+                              <div className="flex items-center gap-2 mt-2 text-xs font-bold text-zinc-500">
+                                <span className="text-accent">★ {anime.score}</span>
+                                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                                <span>{anime.ep_count} Eps</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-5 mb-12">
+                      <div className="w-2 h-10 bg-accent rounded-full shadow-[0_0_15px_var(--color-accent)]" />
+                      <h2 className="text-4xl font-black tracking-tight text-white drop-shadow-md">Browse Genres</h2>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                      {GENRES.map((genre) => (
+                        <div
+                          key={genre.id}
+                          onClick={() => handleGenreClick(genre)}
+                          className={`relative aspect-[16/10] rounded-2xl bg-gradient-to-br ${genre.gradient} p-6 flex flex-col justify-end overflow-hidden cursor-pointer group shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5`}
+                        >
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-500" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                          <span className="relative text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-md group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                            {genre.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             ) : activeTab === 'mylist' ? (
