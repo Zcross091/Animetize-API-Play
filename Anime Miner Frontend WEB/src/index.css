@@ -42,6 +42,13 @@ body {
   position: relative;
 }
 
+/* ─── Hero Ken Burns drift ─── */
+@keyframes heroKen {
+  0%   { transform: scale(1.05) translate(0, 0); }
+  50%  { transform: scale(1.12) translate(-1%, -1%); }
+  100% { transform: scale(1.05) translate(0, 0); }
+}
+
 /* ─── Ink grain texture ─── */
 body::before {
   content: '';
@@ -77,7 +84,7 @@ body::before {
   width: 46px;
   height: 22px;
   flex-shrink: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 56' fill='none'%3E%3Cpath d='M4 44C22 20 40 6 62 8C86 10 98 26 114 14' stroke='%23C4202C' stroke-width='9' stroke-linecap='round'/%3E%3Cpath d='M8 48C28 30 46 18 66 20' stroke='%23B8923D' stroke-width='3' stroke-linecap='round' opacity='0.55'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 48'%3E%3Cpath d='M8,40 C30,30 55,16 112,6 L114,11 C58,22 32,35 12,46 Z' fill='%23C4202C'/%3E%3Cpath d='M14,42 C34,33 58,20 108,9' stroke='%23B8923D' stroke-width='1.5' stroke-linecap='round' opacity='0.55' fill='none'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: left center;
   background-size: contain;

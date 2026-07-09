@@ -159,33 +159,7 @@ function App() {
       }, 7000); // 7 seconds
       return () => clearInterval(interval);
     }
-  }, [heroAnime, selectedAnime, currentHeroIndex]);
-
-  const fetchHeroBanners = async (animeList) => {
-    const promises = animeList.map(async (anime) => {
-      try {
-        const query = `
-          query ($search: String) {
-            Media(search: $search, type: ANIME) {
-              bannerImage
-            }
-          }
-        `;
-        const res = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, variables: { search: anime.title } })
-        });
-        const data = await res.json();
-        const banner = data?.data?.Media?.bannerImage;
-        return { ...anime, banner: banner || anime.image };
-      } catch (e) {
-        console.warn("Failed to fetch banner for", anime.title, e);
-        return { ...anime, banner: anime.image };
-      }
-    });
-    return Promise.all(promises);
-  };
+  }, [heroAnime, selectedAnime]);
 
   useEffect(() => {
     // Fetch Data on Mount
@@ -195,10 +169,12 @@ function App() {
         const airingRes = await fetch('https://api.jikan.moe/v4/seasons/now?limit=15');
         const airingData = await airingRes.json();
         const mappedAiring = airingData.data.map(mapJikanAnime);
-        const heroItems = mappedAiring.slice(0, 5);
-        const heroWithBanners = await fetchHeroBanners(heroItems);
-        setHeroAnime(heroWithBanners);
+        const heroSlice = mappedAiring.slice(0, 5);
+        setHeroAnime(heroSlice);
         setTopAiring(mappedAiring.slice(5));
+        // Progressive upgrade: swap in wide AniList banner art for the hero once it resolves,
+        // instead of the stretched portrait cover Jikan gives us.
+        fetchHeroBanners(heroSlice).then(setHeroAnime);
 
         // Delay to avoid Jikan rate limits (3 requests per second)
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -264,7 +240,7 @@ function App() {
           const mapAni = media => ({
             title: media.title.english || media.title.romaji,
             image: media.coverImage.large,
-            banner: media.bannerImage || media.coverImage.large,
+            banner: media.bannerImage || null,
             ep_count: media.episodes || 12,
             score: media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A',
             synopsis: media.description ? media.description.replace(/<[^>]*>/g, '') : 'No synopsis available.'
@@ -292,10 +268,36 @@ function App() {
   const mapJikanAnime = (anime) => ({
     title: anime.title_english || anime.title,
     image: anime.images.jpg.large_image_url,
+    banner: null,
     ep_count: anime.episodes || 12,
     score: anime.score || 'N/A',
     synopsis: anime.synopsis || 'No synopsis available.'
   });
+
+  // Jikan has no wide banner art — only a portrait cover. For the hero (which needs
+  // a 21:9-ish backdrop) we ask AniList for its dedicated bannerImage per title and
+  // upgrade in place once it resolves, falling back to the cover if AniList has none.
+  const fetchHeroBanners = async (list) => {
+    if (!list || list.length === 0) return list;
+    try {
+      const aliasedFields = list.map((anime, idx) =>
+        `m${idx}: Media(search: "${anime.title.replace(/"/g, '\\"')}", type: ANIME) { bannerImage }`
+      ).join('\n');
+      const res = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: `query { ${aliasedFields} }` })
+      });
+      const result = await res.json();
+      return list.map((anime, idx) => ({
+        ...anime,
+        banner: result?.data?.[`m${idx}`]?.bannerImage || null
+      }));
+    } catch (e) {
+      console.warn("Failed to fetch hero banner art, keeping cover fallback", e);
+      return list;
+    }
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -1330,31 +1332,16 @@ function App() {
                 {heroAnime.length > 0 && heroAnime[currentHeroIndex] && (
                   <section className="relative h-screen min-h-[800px] w-full flex items-center justify-start overflow-hidden">
                     <div className="absolute inset-0 bg-base" />
-                    <div 
-                      className="absolute inset-0 bg-cover bg-center opacity-45 scale-105 transition-all duration-1000" 
-                      style={{ backgroundImage: `url(${heroAnime[currentHeroIndex].banner || heroAnime[currentHeroIndex].image})` }} 
+                    <div
+                      key={heroAnime[currentHeroIndex].banner || heroAnime[currentHeroIndex].image}
+                      className={`absolute inset-0 bg-cover scale-105 transition-opacity duration-1000 animate-[heroKen_18s_ease-in-out_infinite] ${heroAnime[currentHeroIndex].banner ? 'opacity-70 bg-[position:center_35%]' : 'opacity-35 bg-center'}`}
+                      style={{ backgroundImage: `url(${heroAnime[currentHeroIndex].banner || heroAnime[currentHeroIndex].image})` }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-base via-base/30 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-base via-base/60 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-base/95 via-base/55 to-transparent" />
 
-                    {/* Left/Right manual arrows */}
-                    <button 
-                      onClick={() => setCurrentHeroIndex((prev) => (prev - 1 + heroAnime.length) % heroAnime.length)}
-                      className="absolute left-6 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-accent/80 rounded-full border border-white/10 hover:border-accent text-white/70 hover:text-white transition-all cursor-pointer flex items-center justify-center backdrop-blur-md"
-                      title="Previous"
-                    >
-                      <ChevronLeft size={24} />
-                    </button>
-                    <button 
-                      onClick={() => setCurrentHeroIndex((prev) => (prev + 1) % heroAnime.length)}
-                      className="absolute right-6 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-accent/80 rounded-full border border-white/10 hover:border-accent text-white/70 hover:text-white transition-all cursor-pointer flex items-center justify-center backdrop-blur-md"
-                      title="Next"
-                    >
-                      <ChevronRight size={24} />
-                    </button>
-
-                    <div className="relative container mx-auto px-10 md:px-16 pt-32 flex flex-col justify-between h-full pb-24">
-                      <div className="max-w-[900px] mt-auto mb-auto">
+                    <div className="relative container mx-auto px-10 md:px-16 pt-32">
+                      <div className="max-w-[900px]">
                         <span className="inline-flex items-center gap-3 text-sm font-mono font-bold text-gold mb-8 tracking-[0.25em] uppercase">
                           <BrushDivider />
                           Trending This Season
@@ -1390,21 +1377,36 @@ function App() {
                           </button>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Dots indicators inside container at the bottom */}
-                      <div className="flex items-center gap-3 z-20 mt-4 self-start pb-6">
-                        {heroAnime.map((_, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setCurrentHeroIndex(idx)}
-                            className={`h-2 rounded-full transition-all duration-300 border-none cursor-pointer ${idx === currentHeroIndex ? 'bg-accent w-10 shadow-[0_0_8px_var(--color-accent)]' : 'bg-white/30 hover:bg-white/50 w-2.5'}`}
-                            title={`Slide ${idx + 1}`}
-                          />
-                        ))}
-                      </div>
+                    {/* Carousel controls — manual prev/next + position dots */}
+                    <button
+                      onClick={() => setCurrentHeroIndex((currentHeroIndex - 1 + heroAnime.length) % heroAnime.length)}
+                      aria-label="Previous"
+                      className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 z-10 w-11 h-11 items-center justify-center rounded-full bg-black/30 hover:bg-black/50 border border-white/10 text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
+                    >
+                      <ChevronLeft size={22} />
+                    </button>
+                    <button
+                      onClick={() => setCurrentHeroIndex((currentHeroIndex + 1) % heroAnime.length)}
+                      aria-label="Next"
+                      className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 z-10 w-11 h-11 items-center justify-center rounded-full bg-black/30 hover:bg-black/50 border border-white/10 text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
+                    >
+                      <ChevronRight size={22} />
+                    </button>
+                    <div className="absolute bottom-20 md:bottom-24 left-10 md:left-16 z-10 flex items-center gap-2.5">
+                      {heroAnime.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentHeroIndex(idx)}
+                          aria-label={`Go to slide ${idx + 1}`}
+                          className={`h-1.5 rounded-full border-none cursor-pointer transition-all duration-300 ${idx === currentHeroIndex ? 'w-8 bg-accent shadow-[0_0_10px_var(--color-accent)]' : 'w-3 bg-white/25 hover:bg-white/50'}`}
+                        />
+                      ))}
                     </div>
                   </section>
                 )}
+
 
                 {/* 3. Luxurious Cinematic Anime Lists */}
                 <div className="container mx-auto px-4 sm:px-6 md:px-10 lg:px-16 -mt-10 md:-mt-20 relative z-10 space-y-12 md:space-y-24">
