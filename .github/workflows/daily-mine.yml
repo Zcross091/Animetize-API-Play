@@ -1,0 +1,37 @@
+name: Daily Anime Stream Miner
+
+on:
+  schedule:
+    # Runs exactly once a day at 00:00 UTC (5:30 AM IST)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allows you to also run it manually anytime via the GitHub Actions tab
+
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Project Dependencies
+        run: |
+          cd 'Anime Miner Frontend WEB'
+          npm install
+
+      - name: Execute HTTP Stream Miner Script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GOGO_DOMAINS: ${{ secrets.GOGO_DOMAINS }}
+          # 💡 FORCE OVERRIDE: Tells the script it is running in CI
+          CI: true
+          PUPPETEER_HEADLESS: true
+        run: |
+          cd 'Anime Miner Frontend WEB'
+          node miner_http.js
