@@ -41,6 +41,28 @@ const GENRES = [
   { id: 30, name: 'Sports', gradient: 'from-blue-500 to-cyan-500' },
 ];
 
+// --- Hanko seal rating badge (signature element) ---
+function Seal({ score, size = '' }) {
+  return (
+    <span className={`hanko ${size}`}>{score}</span>
+  );
+}
+
+// --- Brush-stroke section divider (signature element) ---
+function BrushDivider({ size = '' }) {
+  return <span className={`brush-divider ${size}`} aria-hidden="true" />;
+}
+
+// --- Section header: brush mark + title, replaces the plain accent bar ---
+function SectionHeader({ title, className = '', size = 'text-4xl' }) {
+  return (
+    <div className={`flex items-center gap-5 ${className}`}>
+      <BrushDivider size="lg" />
+      <h2 className={`${size} font-display font-extrabold tracking-tight text-white`}>{title}</h2>
+    </div>
+  );
+}
+
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -137,7 +159,33 @@ function App() {
       }, 7000); // 7 seconds
       return () => clearInterval(interval);
     }
-  }, [heroAnime, selectedAnime]);
+  }, [heroAnime, selectedAnime, currentHeroIndex]);
+
+  const fetchHeroBanners = async (animeList) => {
+    const promises = animeList.map(async (anime) => {
+      try {
+        const query = `
+          query ($search: String) {
+            Media(search: $search, type: ANIME) {
+              bannerImage
+            }
+          }
+        `;
+        const res = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, variables: { search: anime.title } })
+        });
+        const data = await res.json();
+        const banner = data?.data?.Media?.bannerImage;
+        return { ...anime, banner: banner || anime.image };
+      } catch (e) {
+        console.warn("Failed to fetch banner for", anime.title, e);
+        return { ...anime, banner: anime.image };
+      }
+    });
+    return Promise.all(promises);
+  };
 
   useEffect(() => {
     // Fetch Data on Mount
@@ -147,7 +195,9 @@ function App() {
         const airingRes = await fetch('https://api.jikan.moe/v4/seasons/now?limit=15');
         const airingData = await airingRes.json();
         const mappedAiring = airingData.data.map(mapJikanAnime);
-        setHeroAnime(mappedAiring.slice(0, 5));
+        const heroItems = mappedAiring.slice(0, 5);
+        const heroWithBanners = await fetchHeroBanners(heroItems);
+        setHeroAnime(heroWithBanners);
         setTopAiring(mappedAiring.slice(5));
 
         // Delay to avoid Jikan rate limits (3 requests per second)
@@ -175,6 +225,7 @@ function App() {
                 media (type: ANIME, sort: TRENDING_DESC) {
                   title { english romaji }
                   coverImage { large }
+                  bannerImage
                   episodes
                   averageScore
                   description
@@ -213,6 +264,7 @@ function App() {
           const mapAni = media => ({
             title: media.title.english || media.title.romaji,
             image: media.coverImage.large,
+            banner: media.bannerImage || media.coverImage.large,
             ep_count: media.episodes || 12,
             score: media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A',
             synopsis: media.description ? media.description.replace(/<[^>]*>/g, '') : 'No synopsis available.'
@@ -872,7 +924,9 @@ function App() {
           <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-base/80 backdrop-blur-2xl border-b border-white/5 py-6' : 'bg-transparent py-10'}`}>
             <div className="container mx-auto px-10 md:px-16 flex items-center justify-between">
               <div className="flex items-center gap-14">
-                <div className="text-4xl font-black text-accent tracking-tighter drop-shadow-lg cursor-pointer" onClick={() => { setActiveTab('discover'); setSearchTerm(''); }}>RONIN</div>
+                <div className="wordmark text-4xl cursor-pointer" onClick={() => { setActiveTab('discover'); setSearchTerm(''); }}>
+                  RONIN<span className="cut" />
+                </div>
                 <div className="hidden md:flex items-center gap-10 text-[17px] font-bold text-zinc-400">
                   <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'discover' ? 'text-accent' : 'hover:text-white'}`} onClick={() => setActiveTab('discover')}>Home</button>
                   <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'mylist' ? 'text-accent' : 'hover:text-white'}`} onClick={() => setActiveTab('mylist')}>My List</button>
@@ -913,7 +967,7 @@ function App() {
                   </button>
 
                   {user && profileDropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-64 bg-surface border border-white/10 rounded-2xl p-4 shadow-2xl z-50 flex flex-col gap-3 backdrop-blur-2xl">
+                    <div className="absolute right-0 mt-3 w-64 bg-surface border border-white/10 rounded-xl p-4 shadow-2xl z-50 flex flex-col gap-3 backdrop-blur-2xl">
                       <div className="text-sm font-medium text-zinc-400 break-all px-2">
                         Logged in as: <br />
                         <span className="text-white font-bold">{user.email}</span>
@@ -961,7 +1015,7 @@ function App() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-black text-accent tracking-tighter">RONIN</span>
+                    <span className="wordmark text-2xl">RONIN<span className="cut" /></span>
                     <button 
                       onClick={() => setMobileMenuOpen(false)}
                       className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-all border-none cursor-pointer"
@@ -1028,10 +1082,7 @@ function App() {
           <main className="relative z-10">
             {activeTab === 'search' ? (
               <div className="container mx-auto px-10 md:px-16 pt-40 pb-20">
-                <div className="flex items-center gap-5 mb-12">
-                  <div className="w-2 h-10 bg-accent rounded-full shadow-[0_0_15px_var(--color-accent)]" />
-                  <h2 className="text-4xl font-black tracking-tight text-white drop-shadow-md">Search Results for "{searchTerm}"</h2>
-                </div>
+                <SectionHeader title={`Search Results for "${searchTerm}"`} className="mb-12" />
                 {isSearching ? (
                   <div className="text-xl text-zinc-400 animate-pulse font-bold">Searching database...</div>
                 ) : (
@@ -1042,11 +1093,11 @@ function App() {
                         onClick={() => openAnime(anime)}
                         className="group relative flex-none w-[240px] sm:w-[280px] md:w-[320px] cursor-pointer mb-8"
                       >
-                        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-700 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_40px_rgba(230,52,98,0.2)]">
+                        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-700 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_40px_rgba(196,32,44,0.2)]">
                           <img src={anime.image} alt={anime.title} className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent opacity-70 group-hover:opacity-90 transition-opacity duration-700" />
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                            <div className="bg-accent p-6 rounded-full shadow-[0_0_40px_rgba(230,52,98,0.6)] backdrop-blur-lg transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
+                            <div className="bg-accent p-6 rounded-full shadow-[0_0_40px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
                               <Play size={32} fill="white" className="ml-1" />
                             </div>
                           </div>
@@ -1054,7 +1105,7 @@ function App() {
                         <div className="mt-5 px-2">
                           <h3 className="text-[18px] font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{anime.title}</h3>
                           <div className="flex items-center gap-3 mt-3 text-sm font-bold text-zinc-500 tracking-wide">
-                            <span className="flex items-center gap-1.5 text-accent"><span className="text-[17px] drop-shadow-[0_0_8px_var(--color-accent)]">★</span>{anime.score}</span>
+                            <Seal score={anime.score} />
                             <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
                             <span>{anime.ep_count} Eps</span>
                           </div>
@@ -1069,12 +1120,7 @@ function App() {
                 {selectedGenre ? (
                   <>
                     <div className="flex items-center justify-between mb-12">
-                      <div className="flex items-center gap-5">
-                        <div className="w-2 h-10 bg-accent rounded-full shadow-[0_0_15px_var(--color-accent)]" />
-                        <h2 className="text-4xl font-black tracking-tight text-white drop-shadow-md">
-                          {selectedGenre.name} Anime
-                        </h2>
-                      </div>
+                      <SectionHeader title={`${selectedGenre.name} Anime`} />
                       <button 
                         onClick={() => setSelectedGenre(null)}
                         className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white rounded-full font-bold transition-all border border-white/10 hover:border-white/20 cursor-pointer"
@@ -1096,11 +1142,11 @@ function App() {
                             onClick={() => openAnime(anime)}
                             className="group relative cursor-pointer"
                           >
-                            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(230,52,98,0.25)]">
+                            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
                               <img src={anime.image} alt={anime.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent opacity-85 group-hover:opacity-95 transition-opacity duration-500" />
                               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
-                                <div className="bg-accent p-4 rounded-full shadow-[0_0_20px_rgba(230,52,98,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
+                                <div className="bg-accent p-4 rounded-full shadow-[0_0_20px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
                                   <Play size={20} fill="white" className="ml-0.5" />
                                 </div>
                               </div>
@@ -1108,7 +1154,7 @@ function App() {
                             <div className="mt-4 px-1">
                               <h3 className="text-sm font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{anime.title}</h3>
                               <div className="flex items-center gap-2 mt-2 text-xs font-bold text-zinc-500">
-                                <span className="text-accent">★ {anime.score}</span>
+                                <Seal score={anime.score} />
                                 <span className="w-1 h-1 rounded-full bg-zinc-700" />
                                 <span>{anime.ep_count} Eps</span>
                               </div>
@@ -1120,20 +1166,17 @@ function App() {
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center gap-5 mb-12">
-                      <div className="w-2 h-10 bg-accent rounded-full shadow-[0_0_15px_var(--color-accent)]" />
-                      <h2 className="text-4xl font-black tracking-tight text-white drop-shadow-md">Browse Genres</h2>
-                    </div>
+                    <SectionHeader title="Browse Genres" className="mb-12" />
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                       {GENRES.map((genre) => (
                         <div
                           key={genre.id}
                           onClick={() => handleGenreClick(genre)}
-                          className={`relative aspect-[16/10] rounded-2xl bg-gradient-to-br ${genre.gradient} p-6 flex flex-col justify-end overflow-hidden cursor-pointer group shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5`}
+                          className={`relative aspect-[16/10] rounded-lg bg-gradient-to-br ${genre.gradient} p-6 flex flex-col justify-end overflow-hidden cursor-pointer group shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1.5`}
                         >
                           <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-500" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                          <span className="relative text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-md group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
+                          <span className="relative text-xl md:text-2xl font-display font-extrabold tracking-tight text-white drop-shadow-md group-hover:scale-105 transition-transform duration-500 origin-bottom-left">
                             {genre.name}
                           </span>
                         </div>
@@ -1145,13 +1188,10 @@ function App() {
             ) : activeTab === 'schedule' ? (
               <div className="container mx-auto px-10 md:px-16 pt-40 pb-20">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                  <div className="flex items-center gap-5">
-                    <div className="w-2 h-10 bg-accent rounded-full shadow-[0_0_15px_var(--color-accent)]" />
-                    <h2 className="text-4xl font-black tracking-tight text-white drop-shadow-md">Anime Lists & Schedule</h2>
-                  </div>
+                  <SectionHeader title="Anime Lists & Schedule" />
                   
                   {/* Sub-tab selection */}
-                  <div className="flex flex-wrap items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-1.5 backdrop-blur-md">
+                  <div className="flex flex-wrap items-center gap-3 bg-white/5 border border-white/10 rounded-xl p-1.5 backdrop-blur-md">
                     {[
                       { id: 'airing', label: 'Top Airing' },
                       { id: 'upcoming', label: 'Top Upcoming' },
@@ -1182,11 +1222,11 @@ function App() {
                         onClick={() => openAnime(anime)}
                         className="group relative cursor-pointer"
                       >
-                        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(230,52,98,0.25)]">
+                        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
                           <img src={anime.image} alt={anime.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent opacity-85 group-hover:opacity-95 transition-opacity duration-500" />
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
-                            <div className="bg-accent p-4 rounded-full shadow-[0_0_20px_rgba(230,52,98,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
+                            <div className="bg-accent p-4 rounded-full shadow-[0_0_20px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
                               <Play size={20} fill="white" className="ml-0.5" />
                             </div>
                           </div>
@@ -1194,7 +1234,7 @@ function App() {
                         <div className="mt-4 px-1">
                           <h3 className="text-sm font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{anime.title}</h3>
                           <div className="flex items-center gap-2 mt-2 text-xs font-bold text-zinc-500">
-                            <span className="text-accent">★ {anime.score}</span>
+                            <Seal score={anime.score} />
                             <span className="w-1 h-1 rounded-full bg-zinc-700" />
                             <span>{anime.ep_count} Eps</span>
                           </div>
@@ -1209,12 +1249,9 @@ function App() {
                 
                 {/* 1. Custom Watchlist Section */}
                 <div>
-                  <div className="flex items-center gap-5 mb-10">
-                    <div className="w-2 h-10 bg-accent rounded-full shadow-[0_0_15px_var(--color-accent)]" />
-                    <h2 className="text-3xl font-black tracking-tight text-white drop-shadow-md">My Watchlist</h2>
-                  </div>
+                  <SectionHeader title="My Watchlist" className="mb-10" size="text-3xl" />
                   {watchlist.length === 0 ? (
-                    <div className="text-zinc-500 font-bold bg-white/5 border border-white/5 rounded-2xl p-10 text-center">
+                    <div className="text-zinc-500 font-bold bg-white/5 border border-white/5 rounded-xl p-10 text-center">
                       Your watchlist is empty. Add anime from the home page or detail pages!
                     </div>
                   ) : (
@@ -1225,11 +1262,11 @@ function App() {
                           onClick={() => openAnime(anime)}
                           className="group relative flex-none w-[240px] sm:w-[280px] md:w-[320px] cursor-pointer mb-8"
                         >
-                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-700 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_40px_rgba(230,52,98,0.2)]">
+                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-700 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_40px_rgba(196,32,44,0.2)]">
                             <img src={anime.image} alt={anime.title} className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent opacity-70 group-hover:opacity-90 transition-opacity duration-700" />
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                              <div className="bg-accent p-6 rounded-full shadow-[0_0_40px_rgba(230,52,98,0.6)] backdrop-blur-lg transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
+                              <div className="bg-accent p-6 rounded-full shadow-[0_0_40px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
                                 <Play size={32} fill="white" className="ml-1" />
                               </div>
                             </div>
@@ -1237,7 +1274,7 @@ function App() {
                           <div className="mt-5 px-2">
                             <h3 className="text-[18px] font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{anime.title}</h3>
                             <div className="flex items-center gap-3 mt-3 text-sm font-bold text-zinc-500 tracking-wide">
-                              <span className="flex items-center gap-1.5 text-accent"><span className="text-[17px] drop-shadow-[0_0_8px_var(--color-accent)]">★</span>{anime.score}</span>
+                              <Seal score={anime.score} />
                               <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
                               <span>{anime.ep_count} Eps</span>
                             </div>
@@ -1250,23 +1287,20 @@ function App() {
 
                 {/* 2. Continue Watching Section */}
                 <div>
-                  <div className="flex items-center gap-5 mb-10">
-                    <div className="w-2 h-10 bg-accent rounded-full shadow-[0_0_15px_var(--color-accent)]" />
-                    <h2 className="text-3xl font-black tracking-tight text-white drop-shadow-md">Continue Watching</h2>
-                  </div>
+                  <SectionHeader title="Continue Watching" className="mb-10" size="text-3xl" />
                   {watchHistory.length === 0 ? (
-                    <div className="text-zinc-500 font-bold bg-white/5 border border-white/5 rounded-2xl p-10 text-center">
+                    <div className="text-zinc-500 font-bold bg-white/5 border border-white/5 rounded-xl p-10 text-center">
                       You haven't watched anything yet.
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-8">
                       {watchHistory.map((item, idx) => (
                         <div key={idx} onClick={() => openAnime(item)} className="group relative flex-none w-[240px] sm:w-[280px] md:w-[320px] cursor-pointer mb-8">
-                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-700 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_40px_rgba(230,52,98,0.2)]">
+                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-700 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_40px_rgba(196,32,44,0.2)]">
                             <img src={item.image} alt={item.title} className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent opacity-80 group-hover:opacity-95 transition-opacity duration-700" />
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                              <div className="bg-accent p-6 rounded-full shadow-[0_0_40px_rgba(230,52,98,0.6)] backdrop-blur-lg transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
+                              <div className="bg-accent p-6 rounded-full shadow-[0_0_40px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
                                 <Play size={32} fill="white" className="ml-1" />
                               </div>
                             </div>
@@ -1279,7 +1313,7 @@ function App() {
                           </div>
                           <div className="mt-5 px-2">
                             <h3 className="text-[18px] font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{item.title}</h3>
-                            <div className="mt-3 text-sm font-bold text-accent tracking-wide drop-shadow-[0_0_5px_rgba(230,52,98,0.3)]">
+                            <div className="mt-3 text-sm font-bold text-accent tracking-wide drop-shadow-[0_0_5px_rgba(196,32,44,0.3)]">
                               Watched: Ep {item.lastEp} / {item.ep_count}
                             </div>
                           </div>
@@ -1297,25 +1331,39 @@ function App() {
                   <section className="relative h-screen min-h-[800px] w-full flex items-center justify-start overflow-hidden">
                     <div className="absolute inset-0 bg-base" />
                     <div 
-                      className="absolute inset-0 bg-cover bg-center opacity-40 scale-105 transition-all duration-1000" 
-                      style={{ backgroundImage: `url(${heroAnime[currentHeroIndex].image})` }} 
+                      className="absolute inset-0 bg-cover bg-center opacity-45 scale-105 transition-all duration-1000" 
+                      style={{ backgroundImage: `url(${heroAnime[currentHeroIndex].banner || heroAnime[currentHeroIndex].image})` }} 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-base via-base/40 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-base/95 via-base/80 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-base via-base/30 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-base via-base/60 to-transparent" />
 
-                    <div className="relative container mx-auto px-10 md:px-16 pt-32">
-                      <div className="max-w-[900px]">
-                        <span className="inline-flex items-center gap-3 text-sm font-mono font-bold text-accent mb-8 tracking-[0.25em] uppercase">
-                          <span className="w-3 h-3 rounded-full bg-accent animate-pulse shadow-[0_0_15px_var(--color-accent)]" />
-                          AniList #1 Trending
+                    {/* Left/Right manual arrows */}
+                    <button 
+                      onClick={() => setCurrentHeroIndex((prev) => (prev - 1 + heroAnime.length) % heroAnime.length)}
+                      className="absolute left-6 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-accent/80 rounded-full border border-white/10 hover:border-accent text-white/70 hover:text-white transition-all cursor-pointer flex items-center justify-center backdrop-blur-md"
+                      title="Previous"
+                    >
+                      <ChevronLeft size={24} />
+                    </button>
+                    <button 
+                      onClick={() => setCurrentHeroIndex((prev) => (prev + 1) % heroAnime.length)}
+                      className="absolute right-6 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-accent/80 rounded-full border border-white/10 hover:border-accent text-white/70 hover:text-white transition-all cursor-pointer flex items-center justify-center backdrop-blur-md"
+                      title="Next"
+                    >
+                      <ChevronRight size={24} />
+                    </button>
+
+                    <div className="relative container mx-auto px-10 md:px-16 pt-32 flex flex-col justify-between h-full pb-24">
+                      <div className="max-w-[900px] mt-auto mb-auto">
+                        <span className="inline-flex items-center gap-3 text-sm font-mono font-bold text-gold mb-8 tracking-[0.25em] uppercase">
+                          <BrushDivider />
+                          Trending This Season
                         </span>
-                        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight mb-8 drop-shadow-2xl text-white line-clamp-2 md:line-clamp-3">
+                        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.08] tracking-tight mb-8 drop-shadow-2xl text-white line-clamp-2 md:line-clamp-3">
                           {heroAnime[currentHeroIndex].title}
                         </h1>
                         <div className="flex items-center gap-6 text-[15px] text-zinc-300 font-bold mb-8">
-                          <span className="flex items-center gap-2 text-white bg-accent/90 backdrop-blur-md rounded-md px-4 py-1.5 shadow-lg shadow-accent/20">
-                            ★ {heroAnime[currentHeroIndex].score}
-                          </span>
+                          <Seal score={heroAnime[currentHeroIndex].score} size="lg" />
                           <span>{heroAnime[currentHeroIndex].ep_count} Eps</span>
                           <span className="text-zinc-600">|</span>
                           <span className="text-zinc-400 tracking-wide">HD · SUB / DUB</span>
@@ -1341,6 +1389,18 @@ function App() {
                             </span>
                           </button>
                         </div>
+                      </div>
+
+                      {/* Dots indicators inside container at the bottom */}
+                      <div className="flex items-center gap-3 z-20 mt-4 self-start pb-6">
+                        {heroAnime.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setCurrentHeroIndex(idx)}
+                            className={`h-2 rounded-full transition-all duration-300 border-none cursor-pointer ${idx === currentHeroIndex ? 'bg-accent w-10 shadow-[0_0_8px_var(--color-accent)]' : 'bg-white/30 hover:bg-white/50 w-2.5'}`}
+                            title={`Slide ${idx + 1}`}
+                          />
+                        ))}
                       </div>
                     </div>
                   </section>
@@ -1429,14 +1489,14 @@ function App() {
                     <div className="info-text flex flex-col justify-center">
                       <h3>{selectedAnime.title}</h3>
                       <div className="flex flex-wrap items-center gap-3 mb-3" style={{fontSize:'0.85rem',color:'#a1a1aa',fontWeight:700}}>
-                        <span style={{color:'var(--color-accent)'}}> ★ {selectedAnime.score || 'N/A'}</span>
+                        <Seal score={selectedAnime.score || 'N/A'} />
                         <span>{selectedAnime.ep_count} Eps</span>
                       </div>
                       <p className="mb-4">{selectedAnime.synopsis || 'Select an episode to begin streaming.'}</p>
                       <div>
                         <button
                           onClick={() => toggleWatchlist(selectedAnime)}
-                          className={`flex items-center gap-2 border font-bold text-[13px] px-4 py-2 rounded-lg cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ${isInWatchlist(selectedAnime) ? 'bg-accent/20 border-accent/40 text-accent font-extrabold shadow-[0_0_15px_rgba(230,52,98,0.1)]' : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10 text-white'}`}
+                          className={`flex items-center gap-2 border font-bold text-[13px] px-4 py-2 rounded-lg cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ${isInWatchlist(selectedAnime) ? 'bg-accent/20 border-accent/40 text-accent font-extrabold shadow-[0_0_15px_rgba(196,32,44,0.15)]' : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10 text-white'}`}
                         >
                           <span className="text-[15px] font-black">{isInWatchlist(selectedAnime) ? '✓' : '+'}</span>
                           {isInWatchlist(selectedAnime) ? 'In List' : 'Add to List'}
@@ -1540,7 +1600,7 @@ function App() {
       {/* Authentication Modal */}
       {authModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-surface/90 border border-white/10 p-10 rounded-3xl shadow-2xl flex flex-col gap-6 backdrop-blur-2xl">
+          <div className="relative w-full max-w-md bg-surface/90 border border-white/10 p-10 rounded-2xl shadow-2xl flex flex-col gap-6 backdrop-blur-2xl">
             <button 
               onClick={() => setAuthModalOpen(false)}
               className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-all border-none cursor-pointer"
@@ -1548,7 +1608,7 @@ function App() {
               ✕
             </button>
             <div className="text-center">
-              <h2 className="text-3xl font-black text-white mb-2">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+              <h2 className="text-3xl font-display font-extrabold text-white mb-2">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
               <p className="text-[14px] text-zinc-400 font-medium">
                 {isSignUp ? 'Sign up to sync your progress across devices' : 'Log in to recover your watch list and history'}
               </p>
@@ -1619,10 +1679,10 @@ function AnimeRow({ title, icon, animeList, openAnime }) {
   return (
     <section>
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-1.5 h-7 bg-accent rounded-full shadow-[0_0_12px_var(--color-accent)]" />
-        <div className="flex items-center gap-3">
+        <BrushDivider />
+        <div className="flex items-center gap-2">
           {icon}
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">{title}</h2>
+          <h2 className="text-xl sm:text-2xl font-display font-extrabold tracking-tight text-white">{title}</h2>
         </div>
       </div>
       
@@ -1633,7 +1693,7 @@ function AnimeRow({ title, icon, animeList, openAnime }) {
             onClick={() => openAnime(anime)}
             className="group relative flex-none cursor-pointer anime-card"
           >
-            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(230,52,98,0.25)]">
+            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
               <img 
                 src={anime.image} 
                 alt={anime.title} 
@@ -1642,7 +1702,7 @@ function AnimeRow({ title, icon, animeList, openAnime }) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80" />
               
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
-                <div className="bg-accent p-3 rounded-full shadow-[0_0_20px_rgba(230,52,98,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
+                <div className="bg-accent p-3 rounded-full shadow-[0_0_20px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
                   <Play size={18} fill="white" className="ml-0.5" />
                 </div>
               </div>
@@ -1653,7 +1713,7 @@ function AnimeRow({ title, icon, animeList, openAnime }) {
                 {anime.title}
               </h3>
               <div className="flex items-center gap-2 mt-1.5 text-[11px] font-bold text-zinc-500">
-                <span className="text-accent">★ {anime.score}</span>
+                <Seal score={anime.score} />
                 <span className="w-1 h-1 rounded-full bg-zinc-700" />
                 <span>{anime.ep_count} Eps</span>
               </div>

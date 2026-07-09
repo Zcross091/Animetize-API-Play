@@ -1,19 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap');
 @import "tailwindcss";
 
+/*
+  ── RONIN / Ink & Seal ──
+  A palette drawn from sumi ink, aged washi paper, and the hanko
+  (vermilion seal stamp) used to mark authenticity on Japanese prints.
+  Display type leans on a woodblock-print serif; UI type stays a clean
+  geometric sans so the brush moments read as intentional, not decorative noise.
+*/
+
 @theme {
-  --color-base: #0B0B0F;
-  --color-surface: #151519;
-  --color-accent: #E63462;
-  --color-accent-hover: #D12751;
-  --color-gold: #F2C14E;
+  --color-base: #0A0908;
+  --color-surface: #17130F;
+  --color-accent: #C4202C;
+  --color-accent-hover: #9E121C;
+  --color-gold: #B8923D;
+
+  --color-ink-line: rgba(237, 230, 216, 0.08);
+  --color-washi: #EDE6D8;
 
   --font-sans: "Outfit", system-ui, sans-serif;
+  --font-display: "Shippori Mincho B1", "Outfit", serif;
   --font-mono: "JetBrains Mono", monospace;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -23,11 +39,106 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  position: relative;
+}
+
+/* ─── Ink grain texture ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: radial-gradient(rgba(237,230,216,0.9) 0.6px, transparent 0.6px);
+  background-size: 3px 3px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "palt";
 }
 
 /* ─── Scrollbar ─── */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-base); }
+::-webkit-scrollbar-thumb { background: #2a241d; border-radius: 8px; border: 2px solid var(--color-base); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
+
+/* ─── Brush divider (signature element) ───
+   A single ink-stroke used everywhere a "section marker" is needed,
+   instead of a generic rounded accent bar. */
+.brush-divider {
+  display: inline-block;
+  width: 46px;
+  height: 22px;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 56' fill='none'%3E%3Cpath d='M4 44C22 20 40 6 62 8C86 10 98 26 114 14' stroke='%23C4202C' stroke-width='9' stroke-linecap='round'/%3E%3Cpath d='M8 48C28 30 46 18 66 20' stroke='%23B8923D' stroke-width='3' stroke-linecap='round' opacity='0.55'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: contain;
+}
+.brush-divider.lg { width: 64px; height: 30px; }
+
+/* ─── Hanko seal — used to replace plain star ratings ─── */
+.hanko {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.15em;
+  height: 2.15em;
+  padding: 0 0.35em;
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: var(--color-washi);
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 0.85em;
+  letter-spacing: -0.02em;
+  transform: rotate(-2deg);
+  box-shadow: 0 3px 12px rgba(196,32,44,0.4), inset 0 0 0 1px rgba(255,255,255,0.15);
+}
+.hanko::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 4px;
+  border: 1px solid rgba(237,230,216,0.35);
+  pointer-events: none;
+}
+.hanko.lg {
+  min-width: 2.6em;
+  height: 2.6em;
+  font-size: 1.05em;
+  border-radius: 8px;
+}
+
+/* ─── Wordmark ─── */
+.wordmark {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-washi);
+  display: inline-flex;
+  align-items: center;
+}
+.wordmark .cut {
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  top: 48%;
+  height: 3px;
+  background: var(--color-accent);
+  transform: rotate(-4deg);
+  box-shadow: 0 0 14px rgba(196,32,44,0.7);
+  pointer-events: none;
+}
 
 /* ─── Player Page ─── */
 .player-page {
@@ -79,7 +190,7 @@ body {
   width: 280px;
   flex-shrink: 0;
   background: var(--color-surface);
-  border-left: 1px solid rgba(255,255,255,0.05);
+  border-left: 1px solid var(--color-ink-line);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -89,7 +200,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--color-ink-line);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -107,12 +218,12 @@ body {
   gap: 0.3rem;
 }
 .player-sidebar .missing-ep-row {
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid var(--color-ink-line);
   padding: 0.5rem 0.75rem;
 }
 .range-select {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(237,230,216,0.06);
+  border: 1px solid var(--color-ink-line);
   color: white;
   padding: 0.2rem 0.4rem;
   border-radius: 5px;
@@ -140,7 +251,7 @@ body {
   .player-sidebar {
     width: 100%;
     border-left: none;
-    border-top: 1px solid rgba(255,255,255,0.05);
+    border-top: 1px solid var(--color-ink-line);
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -159,7 +270,7 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--color-ink-line);
   background: var(--color-surface);
   position: sticky;
   top: 0;
@@ -167,9 +278,10 @@ body {
   flex-wrap: wrap;
 }
 .player-header h2 {
+  font-family: var(--font-display);
   font-size: clamp(0.9rem, 3vw, 1.4rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   line-height: 1.3;
   flex: 1;
   min-width: 0;
@@ -184,22 +296,6 @@ body {
   white-space: nowrap;
 }
 
-/* ─── Video Wrapper ─── */
-.video-wrapper {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: black;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-height: 60vh;
-}
-.video-wrapper iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
-
 /* ─── States ─── */
 .p2p-state {
   display: flex;
@@ -211,6 +307,7 @@ body {
   gap: 0.5rem;
 }
 .p2p-state h3 {
+  font-family: var(--font-display);
   font-size: clamp(1rem, 4vw, 1.8rem);
 }
 .p2p-state p {
@@ -229,13 +326,14 @@ body {
   width: clamp(80px, 18vw, 160px);
   aspect-ratio: 2/3;
   object-fit: cover;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   flex-shrink: 0;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
 .anime-info-panel .info-text h3 {
+  font-family: var(--font-display);
   font-size: clamp(1rem, 3.5vw, 1.8rem);
-  font-weight: 900;
+  font-weight: 800;
   margin-bottom: 0.5rem;
 }
 .anime-info-panel .info-text p {
@@ -257,8 +355,8 @@ body {
   gap: 0.5rem;
   padding: 0.75rem 4%;
   background: var(--color-surface);
-  border-top: 1px solid rgba(255,255,255,0.05);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid var(--color-ink-line);
+  border-bottom: 1px solid var(--color-ink-line);
 }
 .server-bar-label {
   font-size: 0.65rem;
@@ -275,7 +373,7 @@ body {
   gap: 0.5rem;
   padding: 0.6rem 4%;
   overflow-x: auto;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--color-ink-line);
   background: var(--color-base);
 }
 .range-bar::-webkit-scrollbar { height: 2px; }
@@ -304,7 +402,7 @@ body {
   gap: 0.5rem;
   padding: 0.6rem 4%;
   background: var(--color-base);
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid var(--color-ink-line);
 }
 .missing-ep-row span {
   font-size: 0.7rem;
@@ -315,8 +413,8 @@ body {
   white-space: nowrap;
 }
 .missing-ep-row input {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(237,230,216,0.05);
+  border: 1px solid var(--color-ink-line);
   color: white;
   padding: 0.35rem 0.6rem;
   width: 90px;
@@ -331,19 +429,19 @@ body {
 
 /* ─── Episode Button ─── */
 .ep-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(237,230,216,0.04);
+  border: 1px solid var(--color-ink-line);
   color: white;
   padding: 0.35rem 0.25rem;
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.18s ease;
+  font-family: var(--font-mono);
   font-size: clamp(0.65rem, 2vw, 0.8rem);
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   line-height: 1;
   width: 100%;
-  font-family: var(--font-sans);
 }
 .episode-grid .ep-btn {
   aspect-ratio: 1;
@@ -352,18 +450,18 @@ body {
   justify-content: center;
   padding: 0;
 }
-.ep-btn:hover { background: rgba(255,255,255,0.12); transform: translateY(-1px); }
+.ep-btn:hover { background: rgba(237,230,216,0.1); transform: translateY(-1px); }
 .ep-btn.active {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  box-shadow: 0 0 12px rgba(230,52,98,0.5);
+  box-shadow: 0 0 12px rgba(196,32,44,0.5);
   transform: scale(1.05);
 }
 
 /* ─── Range Button ─── */
 .range-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(237,230,216,0.04);
+  border: 1px solid var(--color-ink-line);
   color: white;
   padding: 0.35rem 0.75rem;
   border-radius: 5px;
@@ -375,11 +473,11 @@ body {
   transition: all 0.18s;
   flex-shrink: 0;
 }
-.range-btn:hover { background: rgba(255,255,255,0.12); }
+.range-btn:hover { background: rgba(237,230,216,0.1); }
 .range-btn.active {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  box-shadow: 0 0 10px rgba(230,52,98,0.4);
+  box-shadow: 0 0 10px rgba(196,32,44,0.4);
 }
 
 /* ─── Utility Buttons ─── */
@@ -387,7 +485,7 @@ body {
   background: var(--color-accent);
   color: white;
   padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  border-radius: 6px;
   text-decoration: none;
   font-weight: bold;
   transition: all 0.2s ease;
@@ -400,7 +498,7 @@ body {
   color: white;
   border: none;
   padding: 0.85rem 1.75rem;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: bold;
   font-family: inherit;
   cursor: pointer;
