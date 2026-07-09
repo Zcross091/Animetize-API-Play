@@ -10,20 +10,27 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // ─── Generate multiple normalized title variants ───
 // Different sources (AniList, Jikan, database) may store titles differently (e.g. hyphens, spaces, symbols).
 // We query all common variants to avoid mismatches.
-const buildVariants = (t) => {
-  if (!t) return [];
-  const base = t.toLowerCase().trim();
+const buildVariants = (input) => {
+  if (!input) return [];
+  const titles = Array.isArray(input) ? input : [input];
+  let allVariants = [];
   
-  const withSpaces  = base.replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const noSymbols   = base.replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
-  const noSpaces    = withSpaces.replace(/\s+/g, '');
-  const noSeason    = withSpaces.replace(/\s*(season|part)\s*\d+\s*$/i, '').trim();
-  const withHyphens = withSpaces.replace(/\s+/g, '-');
-  const baseHyphenated = base.replace(/\s+/g, '-');
+  titles.forEach(t => {
+    if (!t) return;
+    const base = t.toLowerCase().trim();
+    
+    const withSpaces  = base.replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const noSymbols   = base.replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+    const noSpaces    = withSpaces.replace(/\s+/g, '');
+    const noSeason    = withSpaces.replace(/\s*(season|part)\s*\d+\s*$/i, '').trim();
+    const withHyphens = withSpaces.replace(/\s+/g, '-');
+    const baseHyphenated = base.replace(/\s+/g, '-');
 
-  const subs = [...new Set([base, withSpaces, noSymbols, noSpaces, noSeason, withHyphens, baseHyphenated])];
-  const all  = [...subs, ...subs.map(s => `${s} dub`)];
-  return all;
+    const subs = [base, withSpaces, noSymbols, noSpaces, noSeason, withHyphens, baseHyphenated];
+    allVariants.push(...subs, ...subs.map(s => `${s} dub`));
+  });
+
+  return [...new Set(allVariants)];
 };
 
 const GENRES = [
@@ -239,6 +246,7 @@ function App() {
           
           const mapAni = media => ({
             title: media.title.english || media.title.romaji,
+            originalTitle: media.title.romaji,
             image: media.coverImage.large,
             banner: media.bannerImage || null,
             ep_count: media.episodes || 12,
@@ -267,6 +275,7 @@ function App() {
 
   const mapJikanAnime = (anime) => ({
     title: anime.title_english || anime.title,
+    originalTitle: anime.title,
     image: anime.images.jpg.large_image_url,
     banner: null,
     ep_count: anime.episodes || 12,
@@ -393,7 +402,7 @@ function App() {
     }
 
     // Fetch from Supabase
-    const searchVariants = buildVariants(anime.title);
+    const searchVariants = buildVariants([anime.title, anime.originalTitle].filter(Boolean));
     const { data } = await supabase
       .from('anime_links')
       .select('episode')
@@ -456,7 +465,7 @@ function App() {
       });
     }
 
-    fetchStream(selectedAnime.title, ep);
+    fetchStream(selectedAnime, ep);
   };
 
   const playPrevEpisode = () => {
@@ -475,7 +484,7 @@ function App() {
     }
   };
 
-  const fetchStream = async (title, epNum) => {
+  const fetchStream = async (anime, epNum) => {
     setIsLoadingStream(true);
     setStreamError(false);
     setIsIframe(false);
@@ -484,13 +493,14 @@ function App() {
     setDownloadMagnetUrl(null);
 
     try {
-      const searchVariants = buildVariants(title);
+      const searchVariants = buildVariants([anime.title, anime.originalTitle].filter(Boolean));
+      const fallbackTitle = anime.originalTitle || anime.title;
 
       let dbResList = [];
       let fetchError = null;
 
       try {
-        const proxyUrl = `https://ronin-api-proxy.vercel.app/api/db?episode=${parseInt(epNum)}&searchVariants=${encodeURIComponent(JSON.stringify(searchVariants))}`;
+        const proxyUrl = `https://ronin-api-proxy.vercel.app/api/db?episode=${parseInt(epNum)}&title=${encodeURIComponent(fallbackTitle)}&searchVariants=${encodeURIComponent(JSON.stringify(searchVariants))}`;
         const proxyRes = await fetch(proxyUrl);
         if (proxyRes.ok) {
           dbResList = await proxyRes.json();
