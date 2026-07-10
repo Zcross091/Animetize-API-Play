@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Play, Search, User, Menu, Loader2, HardDriveDownload, Sparkles, Flame, Clock, Trophy, Grid, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Search, User, Menu, Loader2, HardDriveDownload, Sparkles, Flame, Clock, Trophy, Grid, ChevronLeft, ChevronRight, Settings, X } from 'lucide-react';
 import './index.css';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -102,6 +102,10 @@ function App() {
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [user, setUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordUpdateMessage, setPasswordUpdateMessage] = useState('');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
@@ -1031,6 +1035,28 @@ function App() {
     setUser(null);
   };
 
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordUpdateMessage('Password must be at least 6 characters.');
+      return;
+    }
+    setIsUpdatingPassword(true);
+    setPasswordUpdateMessage('');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsUpdatingPassword(false);
+    if (error) {
+      setPasswordUpdateMessage(error.message);
+    } else {
+      setPasswordUpdateMessage('Password updated successfully!');
+      setNewPassword('');
+      setTimeout(() => {
+        setSettingsModalOpen(false);
+        setPasswordUpdateMessage('');
+      }, 2000);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-base text-white pb-48 font-sans">
       {!selectedAnime && (
@@ -1083,6 +1109,16 @@ function App() {
 
                   {user && profileDropdownOpen && (
                     <div className="absolute right-0 mt-3 w-64 bg-surface border border-white/10 rounded-xl p-4 shadow-2xl z-50 flex flex-col gap-3 backdrop-blur-2xl">
+                      <button 
+                        onClick={() => {
+                          setSettingsModalOpen(true);
+                          setProfileDropdownOpen(false);
+                        }}
+                        className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all border-none cursor-pointer flex items-center justify-center gap-2 text-[14px]"
+                      >
+                        <Settings size={16} /> Settings
+                      </button>
+                      <div className="w-full h-[1px] bg-white/5" />
                       <div className="text-sm font-medium text-zinc-400 break-all px-2">
                         Logged in as: <br />
                         <span className="text-white font-bold">{user.email}</span>
@@ -1735,6 +1771,54 @@ function App() {
         </div>
       )}
       {/* Authentication Modal */}
+      {/* Settings Modal */}
+      {settingsModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface w-full max-w-md rounded-2xl p-6 border border-white/10 relative">
+            <button 
+              onClick={() => {
+                setSettingsModalOpen(false);
+                setPasswordUpdateMessage('');
+                setNewPassword('');
+              }}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
+              <Settings size={24} className="text-accent" /> Settings
+            </h2>
+            
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-bold text-white mb-3">Change Password</h3>
+                <form onSubmit={handlePasswordUpdate} className="flex flex-col gap-3">
+                  <input
+                    type="password"
+                    placeholder="New Password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent focus:outline-none transition-colors"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={isUpdatingPassword}
+                    className="w-full py-3 bg-accent hover:bg-accent/80 text-white rounded-xl font-bold transition-colors border-none cursor-pointer disabled:opacity-50"
+                  >
+                    {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                  </button>
+                  {passwordUpdateMessage && (
+                    <div className={`text-sm text-center ${passwordUpdateMessage.includes('success') ? 'text-green-400' : 'text-accent'}`}>
+                      {passwordUpdateMessage}
+                    </div>
+                  )}
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {authModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
           <div className="relative w-full max-w-md bg-surface/90 border border-white/10 p-10 rounded-2xl shadow-2xl flex flex-col gap-6 backdrop-blur-2xl">
