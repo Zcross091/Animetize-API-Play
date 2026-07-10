@@ -8,8 +8,12 @@ import { Seal } from './components/ui/Seal';
 import { BrushDivider } from './components/ui/BrushDivider';
 import { SectionHeader } from './components/ui/SectionHeader';
 import { AnimeRow } from './components/anime/AnimeRow';
-import { AuthModal } from './components/auth/AuthModal';
 import { SettingsModal } from './components/auth/SettingsModal';
+import { PlayerHeader } from './components/player/PlayerHeader';
+import { PlayerSidebarLeft } from './components/player/PlayerSidebarLeft';
+import { PlayerCenter } from './components/player/PlayerCenter';
+import { PlayerSidebarRight } from './components/player/PlayerSidebarRight';
+import { PlayerExpansion } from './components/player/PlayerExpansion';
 import './index.css';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -1610,342 +1614,57 @@ function App() {
         <div className={`player-page ${theaterMode ? 'theater' : ''}`}>
 
           {/* ── Header Bar ── */}
-          <div className="player-header">
-            <h2>{selectedAnime.title}{activeEpisode ? <span className="text-accent"> · Ep {activeEpisode}</span> : ''}</h2>
-            <div className="flex items-center gap-2">
-              {/* Theater toggle */}
-              <button
-                onClick={() => setTheaterMode(t => !t)}
-                title={theaterMode ? 'Exit Theater' : 'Theater Mode'}
-                className="border-none cursor-pointer text-zinc-400 hover:text-white transition-colors bg-transparent px-2 py-1 rounded"
-                style={{fontSize:'1.1rem'}}
-              >
-                {theaterMode ? '⊡' : '⛶'}
-              </button>
-              <button className="bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors border-none cursor-pointer" onClick={closePlayer}>
-                ✕ Close
-              </button>
-            </div>
-          </div>
+          <PlayerHeader 
+            selectedAnime={selectedAnime}
+            activeEpisode={activeEpisode}
+            theaterMode={theaterMode}
+            setTheaterMode={setTheaterMode}
+            closePlayer={closePlayer}
+          />
 
           {/* ── Main Content: 3-Column Layout ── */}
           <div className="player-body">
 
             {/* ── Left Sidebar: Episodes ── */}
-            <div className="player-sidebar-left">
-              <div className="sidebar-header" style={{padding: '0.8rem 0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
-                {availableEpisodes.length > 100 ? (
-                  <div className="relative flex items-center bg-black/30 hover:bg-black/50 transition-colors rounded cursor-pointer" style={{padding: '0.3rem 0.5rem'}}>
-                    <List size={12} className="mr-1 opacity-70" />
-                    <select
-                      value={activeEpRange}
-                      onChange={e => setActiveEpRange(Number(e.target.value))}
-                      className="bg-transparent text-white outline-none border-none text-[11px] font-bold cursor-pointer appearance-none"
-                      style={{paddingRight: '1rem'}}
-                    >
-                      {Array.from({ length: Math.ceil(availableEpisodes.length / 100) }).map((_, idx) => (
-                        <option key={idx} value={idx} className="bg-[#2a2c31] text-white">EPS: {idx * 100 + 1}–{Math.min((idx + 1) * 100, availableEpisodes.length)}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} className="absolute right-1 opacity-70 pointer-events-none" />
-                  </div>
-                ) : (
-                  <div className="flex items-center text-[11px] font-bold bg-black/30 rounded px-2 py-1">
-                    <List size={12} className="mr-1 opacity-70" /> EPS: 1-{availableEpisodes.length}
-                  </div>
-                )}
-                
-                <div className="relative flex items-center flex-1">
-                  <Search size={12} className="absolute left-2 opacity-50 pointer-events-none" />
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Find Episode"
-                    className="bg-black/30 border-none rounded py-1.5 pl-6 pr-2 text-white outline-none w-full text-[11px] placeholder-white/50"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.target.value) {
-                        handleEpisodeChange(parseInt(e.target.value));
-                        e.target.value = '';
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="episode-list">
-                {availableEpisodes.slice(activeEpRange * 100, (activeEpRange + 1) * 100).map(ep => (
-                  <button
-                    key={ep}
-                    className={`ep-list-item ${ep === activeEpisode ? 'active' : ''}`}
-                    onClick={() => handleEpisodeChange(ep)}
-                  >
-                    <span className="ep-num">{ep}</span>
-                    <span>Episode {ep}</span>
-                  </button>
-                ))}
-              </div>
-
-
-            </div>
+            <PlayerSidebarLeft 
+              availableEpisodes={availableEpisodes}
+              activeEpisode={activeEpisode}
+              activeEpRange={activeEpRange}
+              setActiveEpRange={setActiveEpRange}
+              handleEpisodeChange={handleEpisodeChange}
+            />
 
             {/* ── Center Column: Video & Server Controls ── */}
-            <div className="player-center">
-              
-              {/* Video Box */}
-              <div className="video-wrapper shadow-2xl">
-                {isLoadingStream ? (
-                  <div className="p2p-state">
-                    <Loader2 size={36} className="animate-spin text-accent mb-3" />
-                    <h3>Connecting to Swarm...</h3>
-                  </div>
-                ) : streamError === 'blocked' ? (
-                  <div className="p2p-state error-state" style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-                    <h3 style={{color:'var(--color-accent)', marginBottom: '0.75rem'}}>Connection Blocked</h3>
-                    <p style={{color:'#d4d4d8', lineHeight: '1.6', marginBottom: '1.25rem'}}>
-                      We couldn't connect to the database. If you are using <strong>Brave Browser</strong> or an <strong>ad blocker</strong>, it is likely blocking our secure database connection.
-                    </p>
-                    <p style={{color:'#a1a1aa', fontSize: '0.85rem'}}>
-                      <strong>To fix this:</strong> Turn off Brave Shields (tap the Lion icon in the address bar and switch it off) or whitelist this domain in your ad blocker.
-                    </p>
-                  </div>
-                ) : streamError ? (
-                  <div className="p2p-state error-state">
-                    <h3 style={{color:'var(--color-accent)'}}>Extracting Episode...</h3>
-                    <p>Our miners have been deployed. Check back in a few minutes.</p>
-                  </div>
-                ) : activeStreamFormat === 'torrent' ? (
-                  <div className="p2p-state">
-                    <h3>Decentralized Stream Ready</h3>
-                    <p style={{color:'#a1a1aa',maxWidth:'480px',margin:'0.5rem 0 1rem'}}>Use a P2P client to stream ad-free high-quality video.</p>
-                    <a href={availableStreams['torrent']} target="_blank" rel="noopener noreferrer" className="magnet-btn flex items-center gap-2">
-                      <Play size={18} fill="white" /> Launch WebTorrent
-                    </a>
-                  </div>
-                ) : activeStreamFormat && availableStreams[activeStreamFormat]?.startsWith('http') ? (
-                  <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" title="Anime Player" />
-                ) : (
-                  // Not playing yet — show placeholder
-                  <div className="p2p-state">
-                    <h3 style={{color:'#fff'}}>Select an episode to begin streaming.</h3>
-                  </div>
-                )}
-              </div>
-
-              {/* Player Controls Bar */}
-              <div className="player-controls-bar">
-                <div className="controls-left">
-                  <button className="control-toggle" onClick={() => setTheaterMode(t => !t)}>
-                    {theaterMode ? '⊡' : '⛶'} <span>{theaterMode ? 'Collapse' : 'Expand'}</span>
-                  </button>
-                  <button className="control-toggle">
-                    💡 <span>Light</span> On
-                  </button>
-
-                </div>
-                <div className="controls-right flex">
-                  <button className="control-toggle">
-                    Auto Play <span style={{color: 'var(--color-accent)'}}>Off</span>
-                  </button>
-                  <button className="control-toggle">
-                    Auto Next <span style={{color: 'var(--color-accent)'}}>Off</span>
-                  </button>
-                  <button className="control-toggle">
-                    Auto Skip Intro <span style={{color: 'var(--color-accent)'}}>Off</span>
-                  </button>
-                  <div className="flex items-center gap-2 ml-4">
-                    <button onClick={playPrevEpisode} className="bg-transparent border-none text-white cursor-pointer hover:text-accent p-1"><ChevronLeft size={18} /></button>
-                    <button onClick={playNextEpisode} className="bg-transparent border-none text-white cursor-pointer hover:text-accent p-1"><ChevronRight size={18} /></button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Server Switcher Panel */}
-              {Object.keys(availableStreams).length > 0 && (
-                <div className="server-switcher-panel">
-                  <div className="server-switcher-left">
-                    <p>You are watching</p>
-                    <h4>Episode {activeEpisode}</h4>
-                    <p style={{marginTop:'0.5rem'}}>If current server doesn't work please try other servers.</p>
-                  </div>
-                  <div className="server-switcher-right">
-                    
-                    {/* Separate SUB and DUB automatically based on key */}
-                    {['SUB', 'DUB'].map(category => {
-                      const categoryStreams = Object.entries(availableStreams).filter(([key]) => {
-                        if (category === 'DUB') return key.startsWith('dub-');
-                        return !key.startsWith('dub-') && key !== 'torrent';
-                      });
-                      
-                      if (categoryStreams.length === 0) return null;
-
-                      return (
-                        <div className="server-group" key={category}>
-                          <div className="server-group-label">
-                            {category === 'SUB' ? 'CC' : '🎤'} {category}
-                          </div>
-                          <div className="server-buttons">
-                            {categoryStreams.map(([key, url]) => {
-                              if (!url) return null;
-                              let label = key.replace('dub-', 'Server ');
-                              if (key.startsWith('server-')) label = key.replace('server-', 'Server ');
-
-                              return (
-                                <button
-                                  key={key}
-                                  className={`server-btn ${activeStreamFormat === key ? 'active' : ''}`}
-                                  onClick={() => setActiveStreamFormat(key)}
-                                >
-                                  {label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Show P2P Separately if available */}
-                    {availableStreams['torrent'] && (
-                       <div className="server-group">
-                         <div className="server-group-label">
-                           <HardDriveDownload size={14} /> P2P
-                         </div>
-                         <div className="server-buttons">
-                           <button
-                             className={`server-btn text-accent border border-accent/30 ${activeStreamFormat === 'torrent' ? 'active' : ''}`}
-                             onClick={() => setActiveStreamFormat('torrent')}
-                           >
-                             Decentralized Torrents
-                           </button>
-                         </div>
-                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Seasons & Related Dropdown */}
-              {relatedSeasons.length > 0 && (
-                <div className="server-switcher-panel" style={{marginTop:0}}>
-                  <div className="server-switcher-right">
-                    <div className="server-group">
-                      <div className="server-group-label">Related</div>
-                      <div className="server-buttons">
-                        {relatedSeasons.map((season, idx) => (
-                          <button
-                            key={idx}
-                            className="server-btn text-[11px]"
-                            onClick={() => openAnime(season)}
-                          >
-                            {season.relation}: {season.title}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <PlayerCenter 
+              isLoadingStream={isLoadingStream}
+              streamError={streamError}
+              activeStreamFormat={activeStreamFormat}
+              availableStreams={availableStreams}
+              theaterMode={theaterMode}
+              setTheaterMode={setTheaterMode}
+              playPrevEpisode={playPrevEpisode}
+              playNextEpisode={playNextEpisode}
+              activeEpisode={activeEpisode}
+              setActiveStreamFormat={setActiveStreamFormat}
+              relatedSeasons={relatedSeasons}
+              openAnime={openAnime}
+            />
 
             {/* ── Right Sidebar: Anime Info ── */}
-            <div className="player-sidebar-right">
-              <img src={selectedAnime.image} alt={selectedAnime.title} className="sidebar-right-cover" />
-              <h3 className="sidebar-right-title">{selectedAnime.title}</h3>
-              
-              <div className="sidebar-right-meta">
-                <span className="sidebar-right-badge">HD</span>
-                <span className="sidebar-right-badge pink">Ep {selectedAnime.ep_count}</span>
-                <span className="sidebar-right-badge">TV</span>
-                <span className="flex items-center gap-1"><Seal score={selectedAnime.score || 'N/A'} /></span>
-              </div>
-              
-              <p className="sidebar-right-synopsis">
-                {selectedAnime.synopsis || 'No synopsis available.'}
-              </p>
-              
-              <p className="sidebar-right-synopsis mt-4" style={{fontSize:'0.75rem'}}>
-                Ronin Anime is the best site to watch <strong>{selectedAnime.title}</strong> SUB online, or you can even watch <strong>{selectedAnime.title}</strong> DUB in HD quality.
-              </p>
-
-              <button
-                onClick={() => toggleWatchlist(selectedAnime)}
-                className={`flex items-center justify-center gap-2 border font-bold text-[13px] px-4 py-3 rounded-lg cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] w-full mt-4 ${isInWatchlist(selectedAnime) ? 'bg-accent border-accent text-white shadow-[0_0_15px_rgba(196,32,44,0.3)]' : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10 text-white'}`}
-              >
-                <span className="text-[15px] font-black">{isInWatchlist(selectedAnime) ? '✓' : '+'}</span>
-                {isInWatchlist(selectedAnime) ? 'In Watchlist' : 'Add to Watchlist'}
-              </button>
-            </div>
+            <PlayerSidebarRight 
+              selectedAnime={selectedAnime}
+              isInWatchlist={isInWatchlist}
+              toggleWatchlist={toggleWatchlist}
+            />
 
           </div>
 
           {/* ── Lower Player Expansion ── */}
-          <div className="max-w-[1200px] w-full mx-auto px-4 pb-20 pt-10">
-            {/* Share Anime */}
-            <div className="flex items-center gap-4 pb-8 mb-8 border-b border-white/5">
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-accent">
-                 <img src="https://i.pinimg.com/736x/8f/c2/f7/8fc2f704870f7fccad490e50f367e699.jpg" alt="Avatar" className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <h4 className="text-accent font-bold text-lg m-0">Share Anime</h4>
-                <p className="text-white/60 text-sm m-0">to your friends</p>
-              </div>
-            </div>
-
-            {/* Characters & Voice Actors */}
-            {animeCharacters && animeCharacters.length > 0 && (
-              <div className="mb-12">
-                <h3 className="text-accent font-black text-xl mb-6">Characters & Voice Actors</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {animeCharacters.map((charEdge, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-[#1a1b1e] p-3 rounded-xl border border-white/5">
-                      <div className="flex items-center gap-3">
-                        <img src={charEdge.node.image.medium} alt={charEdge.node.name.full} className="w-12 h-12 rounded-full object-cover bg-black" />
-                        <div>
-                          <h5 className="text-white font-bold text-sm m-0">{charEdge.node.name.full}</h5>
-                          <p className="text-white/50 text-xs m-0 capitalize">{charEdge.role.toLowerCase()}</p>
-                        </div>
-                      </div>
-                      <div className="flex -space-x-2">
-                        {charEdge.voiceActors && charEdge.voiceActors.slice(0, 3).map((va, vidx) => (
-                          <img key={vidx} src={va.image.medium} title={va.name.full} alt={va.name.full} className="w-10 h-10 rounded-full border-2 border-[#1a1b1e] object-cover bg-black grayscale hover:grayscale-0 transition-all cursor-pointer" />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Recommended For You */}
-            {animeRecommendations && animeRecommendations.length > 0 && (
-              <div className="mb-12">
-                <h3 className="text-accent font-black text-xl mb-6">Recommended for you</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-                  {animeRecommendations.slice(0, 12).map((rec, idx) => (
-                    <div key={idx} className="anime-card group cursor-pointer" onClick={() => openAnime(rec)}>
-                      <div className="anime-poster-wrapper relative rounded-xl overflow-hidden shadow-lg bg-black aspect-[2/3]">
-                        <img src={rec.image} alt={rec.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                          <div className="w-12 h-12 rounded-full bg-accent text-white flex items-center justify-center shadow-[0_0_20px_rgba(196,32,44,0.5)] transform scale-50 group-hover:scale-100 transition-all duration-300">
-                            <Play size={24} fill="white" />
-                          </div>
-                        </div>
-                        <div className="absolute bottom-2 left-2 flex gap-1 flex-wrap">
-                          <span className="bg-accent text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm">Ep {rec.ep_count}</span>
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <h4 className="text-[13px] md:text-sm font-bold text-white/90 truncate transition-colors group-hover:text-accent">{rec.title}</h4>
-                        <div className="text-[11px] text-white/50 mt-1 flex items-center gap-2">
-                          TV <span className="w-1 h-1 rounded-full bg-white/20"></span> {rec.score}★
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <PlayerExpansion 
+            animeCharacters={animeCharacters}
+            animeRecommendations={animeRecommendations}
+            openAnime={openAnime}
+          />
         </div>
       )}
       {/* Authentication Modal */}
