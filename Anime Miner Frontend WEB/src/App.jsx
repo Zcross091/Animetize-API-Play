@@ -92,6 +92,8 @@ function App() {
   const [relatedSeasons, setRelatedSeasons] = useState([]);
   const [activeStreamFormat, setActiveStreamFormat] = useState(null);
   const [theaterMode, setTheaterMode] = useState(false);
+  const [animeCharacters, setAnimeCharacters] = useState([]);
+  const [animeRecommendations, setAnimeRecommendations] = useState([]);
   
   const [activeTab, setActiveTab] = useState('discover');
   const [selectedGenre, setSelectedGenre] = useState(null);
@@ -470,6 +472,23 @@ function App() {
                 }
               }
             }
+            characters(sort: ROLE, perPage: 8) {
+              edges {
+                role
+                node { name { full } image { medium } }
+                voiceActors(language: JAPANESE) { name { full } image { medium } }
+              }
+            }
+            recommendations(sort: RATING_DESC, perPage: 12) {
+              nodes {
+                mediaRecommendation {
+                  title { english romaji }
+                  coverImage { large }
+                  averageScore
+                  episodes
+                }
+              }
+            }
           } 
         }`;
         const aniRes = await fetch('https://graphql.anilist.co', {
@@ -482,6 +501,28 @@ function App() {
         if (media) {
             anilistEpCount = media.episodes || (media.nextAiringEpisode ? media.nextAiringEpisode.episode - 1 : 0);
             
+            if (media.characters && media.characters.edges) {
+              setAnimeCharacters(media.characters.edges);
+            } else {
+              setAnimeCharacters([]);
+            }
+
+            if (media.recommendations && media.recommendations.nodes) {
+              const recs = media.recommendations.nodes
+                .map(n => n.mediaRecommendation)
+                .filter(Boolean)
+                .map(r => ({
+                  title: r.title.english || r.title.romaji,
+                  originalTitle: r.title.romaji,
+                  image: r.coverImage?.large,
+                  score: r.averageScore ? (r.averageScore / 10).toFixed(1) : 'N/A',
+                  ep_count: r.episodes || '?'
+                }));
+              setAnimeRecommendations(recs);
+            } else {
+              setAnimeRecommendations([]);
+            }
+
             if (media.relations && media.relations.edges) {
               const seasons = media.relations.edges
                 .filter(edge => edge.node.type === 'ANIME' && ['PREQUEL', 'SEQUEL', 'ALTERNATIVE', 'SPIN_OFF'].includes(edge.relationType))
@@ -1846,6 +1887,75 @@ function App() {
               </button>
             </div>
 
+          </div>
+
+          {/* ── Lower Player Expansion ── */}
+          <div className="max-w-[1200px] w-full mx-auto px-4 pb-20 pt-10">
+            {/* Share Anime */}
+            <div className="flex items-center gap-4 pb-8 mb-8 border-b border-white/5">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-accent">
+                 <img src="https://i.pinimg.com/736x/8f/c2/f7/8fc2f704870f7fccad490e50f367e699.jpg" alt="Avatar" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <h4 className="text-accent font-bold text-lg m-0">Share Anime</h4>
+                <p className="text-white/60 text-sm m-0">to your friends</p>
+              </div>
+            </div>
+
+            {/* Characters & Voice Actors */}
+            {animeCharacters && animeCharacters.length > 0 && (
+              <div className="mb-12">
+                <h3 className="text-accent font-black text-xl mb-6">Characters & Voice Actors</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {animeCharacters.map((charEdge, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-[#1a1b1e] p-3 rounded-xl border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <img src={charEdge.node.image.medium} alt={charEdge.node.name.full} className="w-12 h-12 rounded-full object-cover bg-black" />
+                        <div>
+                          <h5 className="text-white font-bold text-sm m-0">{charEdge.node.name.full}</h5>
+                          <p className="text-white/50 text-xs m-0 capitalize">{charEdge.role.toLowerCase()}</p>
+                        </div>
+                      </div>
+                      <div className="flex -space-x-2">
+                        {charEdge.voiceActors && charEdge.voiceActors.slice(0, 3).map((va, vidx) => (
+                          <img key={vidx} src={va.image.medium} title={va.name.full} alt={va.name.full} className="w-10 h-10 rounded-full border-2 border-[#1a1b1e] object-cover bg-black grayscale hover:grayscale-0 transition-all cursor-pointer" />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recommended For You */}
+            {animeRecommendations && animeRecommendations.length > 0 && (
+              <div className="mb-12">
+                <h3 className="text-accent font-black text-xl mb-6">Recommended for you</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+                  {animeRecommendations.slice(0, 12).map((rec, idx) => (
+                    <div key={idx} className="anime-card group cursor-pointer" onClick={() => openAnime(rec)}>
+                      <div className="anime-poster-wrapper relative rounded-xl overflow-hidden shadow-lg bg-black aspect-[2/3]">
+                        <img src={rec.image} alt={rec.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-accent text-white flex items-center justify-center shadow-[0_0_20px_rgba(196,32,44,0.5)] transform scale-50 group-hover:scale-100 transition-all duration-300">
+                            <Play size={24} fill="white" />
+                          </div>
+                        </div>
+                        <div className="absolute bottom-2 left-2 flex gap-1 flex-wrap">
+                          <span className="bg-accent text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm">Ep {rec.ep_count}</span>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <h4 className="text-[13px] md:text-sm font-bold text-white/90 truncate transition-colors group-hover:text-accent">{rec.title}</h4>
+                        <div className="text-[11px] text-white/50 mt-1 flex items-center gap-2">
+                          TV <span className="w-1 h-1 rounded-full bg-white/20"></span> {rec.score}★
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
