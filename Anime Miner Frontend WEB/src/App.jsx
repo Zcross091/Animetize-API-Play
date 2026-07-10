@@ -1,6 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Play, Search, User, Menu, Loader2, HardDriveDownload, Sparkles, Flame, Clock, Trophy, Grid, ChevronLeft, ChevronRight, Settings, X, ChevronDown, List } from 'lucide-react';
+import { 
+  Play, Search, Menu, X, ChevronLeft, ChevronRight, 
+  Home, Compass, Clock, Flame, Sparkles, User, LogOut, Settings, HardDriveDownload, Download, List
+} from 'lucide-react';
+import { Seal } from './components/ui/Seal';
+import { BrushDivider } from './components/ui/BrushDivider';
+import { SectionHeader } from './components/ui/SectionHeader';
+import { AnimeRow } from './components/anime/AnimeRow';
+import { AuthModal } from './components/auth/AuthModal';
+import { SettingsModal } from './components/auth/SettingsModal';
 import './index.css';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -49,27 +58,7 @@ const GENRES = [
   { id: 30, name: 'Sports', gradient: 'from-blue-500 to-cyan-500' },
 ];
 
-// --- Hanko seal rating badge (signature element) ---
-function Seal({ score, size = '' }) {
-  return (
-    <span className={`hanko ${size}`}>{score}</span>
-  );
-}
 
-// --- Brush-stroke section divider (signature element) ---
-function BrushDivider({ size = '' }) {
-  return <span className={`brush-divider ${size}`} aria-hidden="true" />;
-}
-
-// --- Section header: brush mark + title, replaces the plain accent bar ---
-function SectionHeader({ title, className = '', size = 'text-4xl' }) {
-  return (
-    <div className={`flex items-center gap-5 ${className}`}>
-      <BrushDivider size="lg" />
-      <h2 className={`${size} font-display font-extrabold tracking-tight text-white`}>{title}</h2>
-    </div>
-  );
-}
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -1960,179 +1949,34 @@ function App() {
         </div>
       )}
       {/* Authentication Modal */}
-      {/* Settings Modal */}
-      {settingsModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface w-full max-w-md rounded-2xl p-6 border border-white/10 relative">
-            <button 
-              onClick={() => {
-                setSettingsModalOpen(false);
-                setPasswordUpdateMessage('');
-                setNewPassword('');
-              }}
-              className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
-              <Settings size={24} className="text-accent" /> Settings
-            </h2>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-bold text-white mb-3">Change Password</h3>
-                <form onSubmit={handlePasswordUpdate} className="flex flex-col gap-3">
-                  <input
-                    type="password"
-                    placeholder="New Password"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent focus:outline-none transition-colors"
-                  />
-                  <button 
-                    type="submit"
-                    disabled={isUpdatingPassword}
-                    className="w-full py-3 bg-accent hover:bg-accent/80 text-white rounded-xl font-bold transition-colors border-none cursor-pointer disabled:opacity-50"
-                  >
-                    {isUpdatingPassword ? 'Updating...' : 'Update Password'}
-                  </button>
-                  {passwordUpdateMessage && (
-                    <div className={`text-sm text-center ${passwordUpdateMessage.includes('success') ? 'text-green-400' : 'text-accent'}`}>
-                      {passwordUpdateMessage}
-                    </div>
-                  )}
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsModal 
+        settingsModalOpen={settingsModalOpen}
+        setSettingsModalOpen={setSettingsModalOpen}
+        newPassword={newPassword}
+        setNewPassword={setNewPassword}
+        isUpdatingPassword={isUpdatingPassword}
+        passwordUpdateMessage={passwordUpdateMessage}
+        setPasswordUpdateMessage={setPasswordUpdateMessage}
+        handlePasswordUpdate={handlePasswordUpdate}
+      />
 
-      {authModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-surface/90 border border-white/10 p-10 rounded-2xl shadow-2xl flex flex-col gap-6 backdrop-blur-2xl">
-            <button 
-              onClick={() => setAuthModalOpen(false)}
-              className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-all border-none cursor-pointer"
-            >
-              ✕
-            </button>
-            <div className="text-center">
-              <h2 className="text-3xl font-display font-extrabold text-white mb-2">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
-              <p className="text-[14px] text-zinc-400 font-medium">
-                {isSignUp ? 'Sign up to sync your progress across devices' : 'Log in to recover your watch list and history'}
-              </p>
-            </div>
-
-            <form onSubmit={handleAuthSubmit} className="flex flex-col gap-5">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-zinc-400 tracking-wider uppercase">Email Address</label>
-                <input 
-                  type="email" 
-                  required
-                  placeholder="name@example.com"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-base text-zinc-200 focus:outline-none focus:border-accent/50 focus:bg-white/10 transition-all font-medium placeholder-zinc-600"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-zinc-400 tracking-wider uppercase">Password</label>
-                <input 
-                  type="password" 
-                  required
-                  placeholder="••••••••"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-base text-zinc-200 focus:outline-none focus:border-accent/50 focus:bg-white/10 transition-all font-medium placeholder-zinc-600"
-                />
-              </div>
-
-              {authError && (
-                <div className="text-sm font-bold text-accent bg-accent/10 border border-accent/20 rounded-xl py-2.5 px-4">
-                  {authError}
-                </div>
-              )}
-
-              <button 
-                type="submit"
-                disabled={authLoading}
-                className="w-full py-3.5 bg-accent hover:bg-accent-hover text-white font-black text-base rounded-xl transition-all shadow-lg shadow-accent/20 border-none cursor-pointer flex items-center justify-center gap-2"
-              >
-                {authLoading ? <Loader2 size={20} className="animate-spin" /> : isSignUp ? 'SIGN UP' : 'LOG IN'}
-              </button>
-            </form>
-
-            <div className="text-center text-sm font-medium text-zinc-400 mt-2">
-              {isSignUp ? 'Already have an account?' : "Don't have an account yet?"}{' '}
-              <button 
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setAuthError('');
-                }}
-                className="bg-transparent border-none text-accent hover:underline font-bold cursor-pointer"
-              >
-                {isSignUp ? 'Log In' : 'Sign Up'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AuthModal 
+        authModalOpen={authModalOpen}
+        setAuthModalOpen={setAuthModalOpen}
+        isSignUp={isSignUp}
+        setIsSignUp={setIsSignUp}
+        authEmail={authEmail}
+        setAuthEmail={setAuthEmail}
+        authPassword={authPassword}
+        setAuthPassword={setAuthPassword}
+        authError={authError}
+        setAuthError={setAuthError}
+        authLoading={authLoading}
+        handleAuthSubmit={handleAuthSubmit}
+      />
     </div>
   );
 }
 
 // --- Anime Carousel Component ---
-function AnimeRow({ title, icon, animeList, openAnime }) {
-  if (!animeList || animeList.length === 0) return null;
-  return (
-    <section>
-      <div className="flex items-center gap-3 mb-5">
-        <BrushDivider />
-        <div className="flex items-center gap-2">
-          {icon}
-          <h2 className="text-xl sm:text-2xl font-display font-extrabold tracking-tight text-white">{title}</h2>
-        </div>
-      </div>
-      
-      <div className="flex overflow-x-auto gap-3 pb-6 hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6">
-        {animeList.map((anime, idx) => (
-          <div 
-            key={idx} 
-            onClick={() => openAnime(anime)}
-            className="group relative flex-none cursor-pointer anime-card"
-          >
-            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
-              <img 
-                src={anime.image} 
-                alt={anime.title} 
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80" />
-              
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
-                <div className="bg-accent p-3 rounded-full shadow-[0_0_20px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
-                  <Play size={18} fill="white" className="ml-0.5" />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-2 px-0.5">
-              <h3 className="text-[12px] sm:text-[13px] font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">
-                {anime.title}
-              </h3>
-              <div className="flex items-center gap-2 mt-1.5 text-[11px] font-bold text-zinc-500">
-                <Seal score={anime.score} />
-                <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                <span>{anime.ep_count} Eps</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export default App;
