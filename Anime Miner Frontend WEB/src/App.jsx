@@ -665,7 +665,7 @@ function App() {
 
       if (!isBlocked) {
         // Automatically ping the Vercel Proxy to wake up the Ronin API miner
-        fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(title)}&episode=${epNum}`)
+        fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(anime.title || anime.originalTitle || '')}&episode=${epNum}`)
           .catch(e => console.error("Failed to trigger miner", e));
       }
     } finally {
@@ -1710,9 +1710,7 @@ function App() {
                   <button className="control-toggle">
                     💡 <span>Light</span> On
                   </button>
-                  <button className="control-toggle" onClick={closePlayer}>
-                    ✕ <span>Close</span>
-                  </button>
+
                 </div>
                 <div className="controls-right flex">
                   <button className="control-toggle">
