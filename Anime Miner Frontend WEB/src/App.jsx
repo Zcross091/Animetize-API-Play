@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Play, Search, User, Menu, Loader2, HardDriveDownload, Sparkles, Flame, Clock, Trophy, Grid, ChevronLeft, ChevronRight, Settings, X } from 'lucide-react';
+import { Play, Search, User, Menu, Loader2, HardDriveDownload, Sparkles, Flame, Clock, Trophy, Grid, ChevronLeft, ChevronRight, Settings, X, ChevronDown, List } from 'lucide-react';
 import './index.css';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -1603,34 +1603,42 @@ function App() {
 
             {/* ── Left Sidebar: Episodes ── */}
             <div className="player-sidebar-left">
-              <div className="sidebar-header">
-                <span>Episodes</span>
-                <div className="flex items-center gap-1.5">
-                  <button 
-                    onClick={playPrevEpisode}
-                    disabled={!activeEpisode || availableEpisodes.indexOf(activeEpisode) <= 0}
-                    className="p-1.5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-all flex items-center justify-center border-none cursor-pointer"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-                  <button 
-                    onClick={playNextEpisode}
-                    disabled={!activeEpisode || availableEpisodes.indexOf(activeEpisode) >= availableEpisodes.length - 1}
-                    className="p-1.5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-all flex items-center justify-center border-none cursor-pointer"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                  {availableEpisodes.length > 100 && (
+              <div className="sidebar-header" style={{padding: '0.8rem 0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                {availableEpisodes.length > 100 ? (
+                  <div className="relative flex items-center bg-black/30 hover:bg-black/50 transition-colors rounded cursor-pointer" style={{padding: '0.3rem 0.5rem'}}>
+                    <List size={12} className="mr-1 opacity-70" />
                     <select
                       value={activeEpRange}
                       onChange={e => setActiveEpRange(Number(e.target.value))}
-                      className="range-select ml-1"
+                      className="bg-transparent text-white outline-none border-none text-[11px] font-bold cursor-pointer appearance-none"
+                      style={{paddingRight: '1rem'}}
                     >
                       {Array.from({ length: Math.ceil(availableEpisodes.length / 100) }).map((_, idx) => (
-                        <option key={idx} value={idx}>{idx * 100 + 1}–{Math.min((idx + 1) * 100, availableEpisodes.length)}</option>
+                        <option key={idx} value={idx} className="bg-[#2a2c31] text-white">EPS: {idx * 100 + 1}–{Math.min((idx + 1) * 100, availableEpisodes.length)}</option>
                       ))}
                     </select>
-                  )}
+                    <ChevronDown size={12} className="absolute right-1 opacity-70 pointer-events-none" />
+                  </div>
+                ) : (
+                  <div className="flex items-center text-[11px] font-bold bg-black/30 rounded px-2 py-1">
+                    <List size={12} className="mr-1 opacity-70" /> EPS: 1-{availableEpisodes.length}
+                  </div>
+                )}
+                
+                <div className="relative flex items-center flex-1">
+                  <Search size={12} className="absolute left-2 opacity-50 pointer-events-none" />
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Find Episode"
+                    className="bg-black/30 border-none rounded py-1.5 pl-6 pr-2 text-white outline-none w-full text-[11px] placeholder-white/50"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.target.value) {
+                        handleEpisodeChange(parseInt(e.target.value));
+                        e.target.value = '';
+                      }
+                    }}
+                  />
                 </div>
               </div>
 
@@ -1647,21 +1655,7 @@ function App() {
                 ))}
               </div>
 
-              <div className="sidebar-header" style={{borderTop:'1px solid rgba(255,255,255,0.05)', borderBottom:'none'}}>
-                <span>Jump:</span>
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 110"
-                  className="bg-black/50 border border-white/10 rounded px-2 py-1 text-white outline-none w-24 text-xs"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target.value) {
-                      handleEpisodeChange(parseInt(e.target.value));
-                      e.target.value = '';
-                    }
-                  }}
-                />
-              </div>
+
             </div>
 
             {/* ── Center Column: Video & Server Controls ── */}
