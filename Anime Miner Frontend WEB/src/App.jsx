@@ -8,6 +8,7 @@ import { Seal } from './components/ui/Seal';
 import { BrushDivider } from './components/ui/BrushDivider';
 import { SectionHeader } from './components/ui/SectionHeader';
 import { AnimeRow } from './components/anime/AnimeRow';
+import { AuthModal } from './components/auth/AuthModal';
 import { SettingsModal } from './components/auth/SettingsModal';
 import { PlayerHeader } from './components/player/PlayerHeader';
 import { PlayerSidebarLeft } from './components/player/PlayerSidebarLeft';
