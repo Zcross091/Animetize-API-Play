@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Project Dependencies
         run: |
-          cd 'Anime Miner Frontend WEB'
+          cd 'anime-miner'
           npm install
 
       - name: Execute HTTP Stream Miner Script
