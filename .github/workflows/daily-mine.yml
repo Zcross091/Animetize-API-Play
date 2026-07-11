@@ -2,8 +2,8 @@ name: Daily Anime Stream Miner
 
 on:
   schedule:
-    # Runs exactly once a day at 00:00 UTC (5:30 AM IST)
-    - cron: '0 0 * * *'
+    # Runs exactly once a day at 17:10 UTC (10:40 PM IST)
+    - cron: '10 17 * * *'
   workflow_dispatch: # Allows you to also run it manually anytime via the GitHub Actions tab
 
 jobs:
