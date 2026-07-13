@@ -42,4 +42,16 @@ The `start.js` script inside Open Anime API is an absolute lifesaver. It feature
 
 ---
 
+## 📱 The Ultimate Desktop Experience: RoninX Anime Client
+
+While the website is fantastic, there is a dedicated desktop application that takes the experience to an entirely new level: **RoninX Anime Client**.
+
+Built to consume the same API, the RoninX Client offers a native, immersive, and incredibly polished viewing experience that outperforms a standard web browser interface.
+
+[![RoninX Anime Client Repository](https://img.shields.io/badge/View_Repo-RoninX_Anime_Client-f43f5e?style=for-the-badge&logo=github)](https://github.com/Zcross091/RoninX-Anime-Client)
+
+> **Note on Cloning:** Because the RoninX Anime Client relies directly on the private backend *Ronin API*, you cannot simply copy and run it out of the box. **However**, you can absolutely fork the client, swap out its API endpoints to connect to your own instance of the **Open Anime API**, and build your own custom desktop anime project!
+
+---
+
 Enjoy your endless anime streaming experience with Anime Miner Frontend WEB!
