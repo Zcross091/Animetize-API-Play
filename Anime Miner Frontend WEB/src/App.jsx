@@ -85,6 +85,7 @@ function App() {
   const [availableStreams, setAvailableStreams] = useState({});
   const [relatedSeasons, setRelatedSeasons] = useState([]);
   const [activeStreamFormat, setActiveStreamFormat] = useState(null);
+  const [nextAiringEpisode, setNextAiringEpisode] = useState(null);
   const [theaterMode, setTheaterMode] = useState(false);
   const [animeCharacters, setAnimeCharacters] = useState([]);
   const [animeRecommendations, setAnimeRecommendations] = useState([]);
@@ -446,12 +447,13 @@ function App() {
     
     // Fetch from AniList for accurate ongoing episode counts and related seasons
     let anilistEpCount = 0;
+    setNextAiringEpisode(null);
     try {
-        const query = `
+      const query = `
         { 
           Media(search: "${anime.title.replace(/"/g, '\\"')}", type: ANIME) { 
             episodes 
-            nextAiringEpisode { episode } 
+            nextAiringEpisode { episode airingAt } 
             relations {
               edges {
                 relationType(version: 2)
@@ -493,6 +495,7 @@ function App() {
         const aniData = await aniRes.json();
         const media = aniData?.data?.Media;
         if (media) {
+            setNextAiringEpisode(media.nextAiringEpisode || null);
             anilistEpCount = media.episodes || (media.nextAiringEpisode ? media.nextAiringEpisode.episode - 1 : 0);
             
             if (media.characters && media.characters.edges) {
@@ -573,6 +576,7 @@ function App() {
     setDownloadMagnetUrl(null);
     setAvailableStreams({});
     setActiveStreamFormat(null);
+    setNextAiringEpisode(null);
   };
 
   const handleEpisodeChange = (ep) => {
@@ -1656,6 +1660,7 @@ function App() {
               selectedAnime={selectedAnime}
               isInWatchlist={isInWatchlist}
               toggleWatchlist={toggleWatchlist}
+              nextAiringEpisode={nextAiringEpisode}
             />
 
           </div>
