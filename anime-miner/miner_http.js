@@ -15,7 +15,8 @@ function saveCache() {
 
 puppeteer.use(StealthPlugin());
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-const GOGO_URL = "https://gogoanime.or.at";
+const GOGO_DOMAINS = process.env.GOGO_DOMAINS ? process.env.GOGO_DOMAINS.split(',').map(d => d.trim().replace(/\/$/, '')) : [];
+const HIANIME_CLUSTER = process.env.HIANIME_CLUSTER ? process.env.HIANIME_CLUSTER.split(',').map(d => d.trim().replace(/\/$/, '')) : [];
 const isCI = Boolean(process.env.CI);
 const headlessMode = process.env.PUPPETEER_HEADLESS === 'true'
     ? true
@@ -66,7 +67,7 @@ async function scrapeAnimePage(browser, animeUrl, ignoreCache = false) {
         // To save time during the deep dive, process them sequentially
         for (let i = 0; i < episodeLinks.length; i++) {
             const url = episodeLinks[i];
-            const match = url.match(/gogoanime\.or\.at\/(.*?)-episode-(\d+)/i);
+            const match = url.match(/\/\/[^\/]+\/(.*?)-episode-(\d+)/i);
             if (!match) continue;
             
             const rawTitle = match[1];
@@ -121,6 +122,59 @@ async function scrapeAnimePage(browser, animeUrl, ignoreCache = false) {
     await page.close();
 }
 
+async function scrapeHiAnimePage(browser, animeQuery) {
+    if (HIANIME_CLUSTER.length === 0) return;
+    const domain = HIANIME_CLUSTER[0];
+    console.log(`\n📚 HiAnime DEEP DIVE: ${animeQuery} on ${domain}`);
+    
+    const page = await browser.newPage();
+    const url = `${domain}/search?keyword=${encodeURIComponent(animeQuery)}`;
+    
+    try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        
+        const firstResult = await page.evaluate(() => {
+            const items = Array.from(document.querySelectorAll('.film_list-wrap .flw-item'));
+            if (items.length === 0) return null;
+            const titleEl = items[0].querySelector('.film-name a');
+            return titleEl ? titleEl.href : null;
+        });
+
+        if (firstResult) {
+            console.log(`   🎯 Found HiAnime match: ${firstResult}`);
+            const watchUrl = firstResult.replace(domain + '/', domain + '/watch/');
+            await page.goto(watchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            
+            await page.waitForSelector('#iframe-embed', { timeout: 10000 }).catch(() => {});
+            
+            const iframeSrc = await page.evaluate(() => {
+                const iframe = document.querySelector('#iframe-embed');
+                return iframe ? iframe.src : null;
+            });
+
+            if (iframeSrc) {
+                const epNum = 1; // Basic daily scraper targets episode 1 by default for movies/newly released
+                const cleanTitle = animeQuery.replace(/-/g, ' ').toLowerCase().trim();
+                const { error } = await supabase.from('anime_links').upsert(
+                    { title: cleanTitle, episode: epNum, type: 'hianime', url: iframeSrc },
+                    { onConflict: 'title, episode, type' }
+                );
+                if (!error) {
+                    console.log(`      💾 Saved HiAnime [${cleanTitle}] Ep ${epNum}`);
+                }
+            } else {
+                console.log(`      ⚠️ No embed iframe found on watch page`);
+            }
+        } else {
+            console.log(`   ⚠️ No HiAnime results found for ${animeQuery}`);
+        }
+    } catch(e) {
+        console.error(`   ❌ HiAnime scrape failed:`, e.message);
+    } finally {
+        await page.close();
+    }
+}
+
 
 async function mineHttp() {
     console.log(`🚀 Starting ADVANCED HTTP Stream Miner (Gogoanime.or.at)...`);
@@ -140,7 +194,7 @@ async function mineHttp() {
         console.log(`\n🔍 MANUAL SEARCH MODE: "${searchQuery}"`);
         const searchPage = await browser.newPage();
         try {
-            await searchPage.goto(`${GOGO_URL}/?s=${encodeURIComponent(searchQuery)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await searchPage.goto(`${GOGO_DOMAINS[0]}/?s=${encodeURIComponent(searchQuery)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
             
             const queryBase = searchQuery.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -159,6 +213,9 @@ async function mineHttp() {
             } else {
                 console.log(`❌ No anime found for "${searchQuery}"`);
             }
+            
+            // Also invoke the HiAnime scraper for this search query!
+            await scrapeHiAnimePage(browser, searchQuery);
         } catch(e) {
             console.log("Search failed:", e.message);
         }
@@ -168,7 +225,7 @@ async function mineHttp() {
         const scoutPage = await browser.newPage();
         
         try {
-            await scoutPage.goto(GOGO_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await scoutPage.goto(GOGO_DOMAINS[0], { waitUntil: 'domcontentloaded', timeout: 30000 });
             const recentEps = await scoutPage.evaluate(() => {
                 const links = Array.from(document.querySelectorAll('a'));
                 return [...new Set(links.filter(l => l.href && l.href.includes('-episode-')).map(l => l.href))];
@@ -181,9 +238,9 @@ async function mineHttp() {
                 // Reconstruct the root anime URLs to find the base series
                 const activeAnimeUrls = new Set();
                 for (const epUrl of recentEps) {
-                    const match = epUrl.match(/gogoanime\.or\.at\/(.*?)-episode-\d+/i);
+                    const match = epUrl.match(/\/\/[^\/]+\/(.*?)-episode-\d+/i);
                     if (match) {
-                        activeAnimeUrls.add(`https://gogoanime.or.at/anime/${match[1]}/`);
+                        activeAnimeUrls.add(`${GOGO_DOMAINS[0]}/anime/${match[1]}/`);
                     }
                 }
                 
