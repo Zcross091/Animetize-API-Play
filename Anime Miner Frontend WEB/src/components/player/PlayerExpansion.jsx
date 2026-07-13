@@ -11,7 +11,7 @@ export function PlayerExpansion({
       {/* Share Anime */}
       <div className="flex items-center gap-4 pb-8 mb-8 border-b border-white/5">
         <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-accent">
-            <img src="https://i.pinimg.com/736x/8f/c2/f7/8fc2f704870f7fccad490e50f367e699.jpg" alt="Avatar" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt="Avatar" className="w-full h-full object-cover" />
         </div>
         <div>
           <h4 className="text-accent font-bold text-lg m-0">Share Anime</h4>
