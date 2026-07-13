@@ -15,8 +15,12 @@ function saveCache() {
 
 puppeteer.use(StealthPlugin());
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-const GOGO_DOMAINS = process.env.GOGO_DOMAINS ? process.env.GOGO_DOMAINS.split(',').map(d => d.trim().replace(/\/$/, '')) : [];
-const HIANIME_CLUSTER = process.env.HIANIME_CLUSTER ? process.env.HIANIME_CLUSTER.split(',').map(d => d.trim().replace(/\/$/, '')) : [];
+const GOGO_DOMAINS = process.env.GOGO_DOMAINS 
+    ? process.env.GOGO_DOMAINS.split(',').map(d => d.trim().replace(/\/(popular|home)\/?$/i, '').replace(/\/$/, '')) 
+    : [];
+const HIANIME_CLUSTER = process.env.HIANIME_CLUSTER 
+    ? process.env.HIANIME_CLUSTER.split(',').map(d => d.trim().replace(/\/(popular|home)\/?$/i, '').replace(/\/$/, '')) 
+    : [];
 const isCI = Boolean(process.env.CI);
 const headlessMode = process.env.PUPPETEER_HEADLESS === 'true'
     ? true
