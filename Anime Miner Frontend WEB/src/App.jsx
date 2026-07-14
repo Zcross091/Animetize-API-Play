@@ -1445,7 +1445,7 @@ function App() {
                       Your watchlist is empty. Add anime from the home page or detail pages!
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 md:gap-6">
                       {watchlist.map((anime, idx) => (
                         <div 
                           key={idx} 
@@ -1483,7 +1483,7 @@ function App() {
                       You haven't watched anything yet.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 md:gap-6">
                       {watchHistory.map((item, idx) => (
                         <div key={idx} onClick={() => openAnime(item)} className="group relative cursor-pointer">
                           <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
