@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { 
   Play, Search, Menu, X, ChevronLeft, ChevronRight, 
-  Home, Compass, Clock, Flame, Sparkles, User, LogOut, Settings, HardDriveDownload, Download, List
+  Home, Compass, Clock, Flame, Sparkles, User, LogOut, Settings, HardDriveDownload, Download, List, Loader2
 } from 'lucide-react';
 import { Seal } from './components/ui/Seal';
 import { BrushDivider } from './components/ui/BrushDivider';
