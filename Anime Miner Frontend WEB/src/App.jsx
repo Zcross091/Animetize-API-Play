@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { 
   Play, Search, Menu, X, ChevronLeft, ChevronRight, 
-  Home, Compass, Clock, Flame, Sparkles, User, LogOut, Settings, HardDriveDownload, Download, List, Loader2
+  Home, Compass, Clock, Flame, Sparkles, User, LogOut, Settings, HardDriveDownload, Download, List, Loader2, BookOpen
 } from 'lucide-react';
 import { Seal } from './components/ui/Seal';
 import { BrushDivider } from './components/ui/BrushDivider';
@@ -89,6 +89,15 @@ function App() {
   const [theaterMode, setTheaterMode] = useState(false);
   const [animeCharacters, setAnimeCharacters] = useState([]);
   const [animeRecommendations, setAnimeRecommendations] = useState([]);
+  
+  // --- Manga States ---
+  const [heroManga, setHeroManga] = useState([]);
+  const [trendingManga, setTrendingManga] = useState([]);
+  const [popularManga, setPopularManga] = useState([]);
+  const [mangaSearchTerm, setMangaSearchTerm] = useState('');
+  const [mangaSearchResults, setMangaSearchResults] = useState([]);
+  const [isMangaSearching, setIsMangaSearching] = useState(false);
+  const [isLoadingManga, setIsLoadingManga] = useState(true);
   
   const [activeTab, setActiveTab] = useState('discover');
   const [selectedGenre, setSelectedGenre] = useState(null);
@@ -214,6 +223,71 @@ function App() {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // --- Fetch Manga Home Data ---
+  useEffect(() => {
+    const fetchMangaHomeData = async () => {
+      try {
+        const query = `
+          query {
+            trending: Page (page: 1, perPage: 15) {
+              media (type: MANGA, sort: TRENDING_DESC) {
+                title { english romaji }
+                synonyms
+                coverImage { large }
+                bannerImage
+                chapters
+                averageScore
+                description
+              }
+            }
+            popular: Page (page: 1, perPage: 15) {
+              media (type: MANGA, sort: POPULARITY_DESC) {
+                title { english romaji }
+                synonyms
+                coverImage { large }
+                chapters
+                averageScore
+                description
+              }
+            }
+          }
+        `;
+        const res = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ query })
+        });
+        const result = await res.json();
+        
+        const mapManga = media => ({
+          title: media.title.english || media.title.romaji,
+          originalTitle: media.title.romaji,
+          synonyms: media.synonyms || [],
+          image: media.coverImage.large,
+          banner: media.bannerImage || null,
+          ep_count: media.chapters || '?',
+          score: media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A',
+          synopsis: media.description ? media.description.replace(/<[^>]*>/g, '') : 'No synopsis available.',
+          isManga: true
+        });
+
+        if (result?.data?.trending?.media) {
+          const mappedTrending = result.data.trending.media.map(mapManga);
+          setHeroManga(mappedTrending.slice(0, 5));
+          setTrendingManga(mappedTrending.slice(5));
+        }
+        if (result?.data?.popular?.media) {
+          setPopularManga(result.data.popular.media.map(mapManga));
+        }
+      } catch (err) {
+        console.error("AniList manga fetch failed:", err);
+      } finally {
+        setIsLoadingManga(false);
+      }
+    };
+    fetchMangaHomeData();
   }, []);
 
   useEffect(() => {
@@ -436,6 +510,53 @@ function App() {
     }
   };
 
+  const handleMangaSearch = async (e) => {
+    e.preventDefault();
+    if (!mangaSearchTerm.trim()) return;
+    
+    setIsMangaSearching(true);
+    setMangaSearchResults([]);
+    setActiveTab('mangaSearch');
+    
+    try {
+      const query = `
+        query ($search: String) {
+          Page (page: 1, perPage: 24) {
+            media (search: $search, type: MANGA, sort: POPULARITY_DESC) {
+              title { english romaji }
+              coverImage { large }
+              chapters
+              averageScore
+              description
+            }
+          }
+        }
+      `;
+      const res = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ query, variables: { search: mangaSearchTerm } })
+      });
+      const result = await res.json();
+      const mediaList = result?.data?.Page?.media;
+      if (mediaList && mediaList.length > 0) {
+        const mapped = mediaList.map(media => ({
+          title: media.title.english || media.title.romaji,
+          image: media.coverImage.large,
+          ep_count: media.chapters || '?',
+          score: media.averageScore ? (media.averageScore / 10).toFixed(1) : 'N/A',
+          synopsis: media.description ? media.description.replace(/<[^>]*>/g, '') : 'No synopsis available.',
+          isManga: true
+        }));
+        setMangaSearchResults(mapped);
+      }
+    } catch (fallbackErr) {
+      console.error("Manga search failed:", fallbackErr);
+    } finally {
+      setIsMangaSearching(false);
+    }
+  };
+
   const openAnime = async (anime) => {
     setSelectedAnime(anime);
     setIsPlaying(false);
@@ -451,9 +572,9 @@ function App() {
     try {
       const query = `
         { 
-          Media(search: "${anime.title.replace(/"/g, '\\"')}", type: ANIME) { 
-            episodes 
-            nextAiringEpisode { episode airingAt } 
+          Media(search: "${anime.title.replace(/"/g, '\\"')}", type: ${anime.isManga ? 'MANGA' : 'ANIME'}) { 
+            ${anime.isManga ? 'chapters' : 'episodes'} 
+            ${anime.isManga ? '' : 'nextAiringEpisode { episode airingAt }'} 
             relations {
               edges {
                 relationType(version: 2)
@@ -462,7 +583,7 @@ function App() {
                   title { english romaji }
                   synonyms
                   coverImage { large }
-                  episodes
+                  ${anime.isManga ? 'chapters' : 'episodes'}
                   averageScore
                   description
                 }
@@ -472,7 +593,6 @@ function App() {
               edges {
                 role
                 node { name { full } image { medium } }
-                voiceActors(language: JAPANESE) { name { full } image { medium } }
               }
             }
             recommendations(sort: RATING_DESC, perPage: 12) {
@@ -481,7 +601,7 @@ function App() {
                   title { english romaji }
                   coverImage { large }
                   averageScore
-                  episodes
+                  ${anime.isManga ? 'chapters' : 'episodes'}
                 }
               }
             }
@@ -495,8 +615,10 @@ function App() {
         const aniData = await aniRes.json();
         const media = aniData?.data?.Media;
         if (media) {
-            setNextAiringEpisode(media.nextAiringEpisode || null);
-            anilistEpCount = media.episodes || (media.nextAiringEpisode ? media.nextAiringEpisode.episode - 1 : 0);
+            if (!anime.isManga) {
+              setNextAiringEpisode(media.nextAiringEpisode || null);
+            }
+            anilistEpCount = anime.isManga ? (media.chapters || 0) : (media.episodes || (media.nextAiringEpisode ? media.nextAiringEpisode.episode - 1 : 0));
             
             if (media.characters && media.characters.edges) {
               setAnimeCharacters(media.characters.edges);
@@ -522,7 +644,7 @@ function App() {
 
             if (media.relations && media.relations.edges) {
               const seasons = media.relations.edges
-                .filter(edge => edge.node.type === 'ANIME' && ['PREQUEL', 'SEQUEL', 'ALTERNATIVE', 'SPIN_OFF'].includes(edge.relationType))
+                .filter(edge => edge.node.type === (anime.isManga ? 'MANGA' : 'ANIME') && ['PREQUEL', 'SEQUEL', 'ALTERNATIVE', 'SPIN_OFF'].includes(edge.relationType))
                 .map(edge => {
                   const rNode = edge.node;
                   return {
@@ -530,10 +652,11 @@ function App() {
                     originalTitle: rNode.title.romaji,
                     synonyms: rNode.synonyms || [],
                     image: rNode.coverImage?.large,
-                    ep_count: rNode.episodes || 12,
+                    ep_count: (anime.isManga ? rNode.chapters : rNode.episodes) || 12,
                     score: rNode.averageScore ? (rNode.averageScore / 10).toFixed(1) : 'N/A',
                     synopsis: rNode.description ? rNode.description.replace(/<[^>]*>/g, '') : 'No synopsis available.',
-                    relation: edge.relationType
+                    relation: edge.relationType,
+                    isManga: anime.isManga
                   };
                 });
               setRelatedSeasons(seasons);
@@ -1109,6 +1232,7 @@ function App() {
                 </div>
                 <div className="hidden md:flex items-center gap-10 text-[17px] font-bold text-zinc-400">
                   <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'discover' ? 'text-accent' : 'hover:text-white'}`} onClick={() => setActiveTab('discover')}>Home</button>
+                  <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'manga' ? 'text-accent' : 'hover:text-white'}`} onClick={() => setActiveTab('manga')}>Manga</button>
                   <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'mylist' ? 'text-accent' : 'hover:text-white'}`} onClick={() => setActiveTab('mylist')}>My List</button>
                   <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'browse' ? 'text-accent' : 'hover:text-white'}`} onClick={() => { setActiveTab('browse'); setSelectedGenre(null); }}>Browse</button>
                   <button className={`bg-transparent border-none cursor-pointer transition-colors ${activeTab === 'schedule' ? 'text-accent' : 'hover:text-white'}`} onClick={() => { setActiveTab('schedule'); handleScheduleTabChange('airing'); }}>Schedule</button>
@@ -1116,16 +1240,29 @@ function App() {
               </div>
               
               <div className="flex items-center gap-8">
-                <form onSubmit={handleSearch} className="relative hidden lg:block">
-                  <input 
-                    type="text" 
-                    placeholder="Search for an anime..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-full py-3.5 pl-8 pr-14 text-base text-zinc-200 focus:outline-none focus:border-accent/50 focus:bg-white/10 w-96 transition-all font-medium placeholder-zinc-500"
-                  />
-                  <Search size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                </form>
+                {activeTab === 'manga' || activeTab === 'mangaSearch' ? (
+                  <form onSubmit={handleMangaSearch} className="relative hidden lg:block">
+                    <input 
+                      type="text" 
+                      placeholder="Search for a manga..." 
+                      value={mangaSearchTerm}
+                      onChange={(e) => setMangaSearchTerm(e.target.value)}
+                      className="bg-white/5 border border-white/10 rounded-full py-3.5 pl-8 pr-14 text-base text-zinc-200 focus:outline-none focus:border-accent/50 focus:bg-white/10 w-96 transition-all font-medium placeholder-zinc-500"
+                    />
+                    <Search size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  </form>
+                ) : (
+                  <form onSubmit={handleSearch} className="relative hidden lg:block">
+                    <input 
+                      type="text" 
+                      placeholder="Search for an anime..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="bg-white/5 border border-white/10 rounded-full py-3.5 pl-8 pr-14 text-base text-zinc-200 focus:outline-none focus:border-accent/50 focus:bg-white/10 w-96 transition-all font-medium placeholder-zinc-500"
+                    />
+                    <Search size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  </form>
+                )}
                 <div className="relative">
                   <button 
                     onClick={() => {
@@ -1246,6 +1383,12 @@ function App() {
                       Home
                     </button>
                     <button 
+                      className={`w-full text-left bg-transparent border-none cursor-pointer py-2 transition-colors ${activeTab === 'manga' ? 'text-accent' : 'hover:text-white'}`} 
+                      onClick={() => { setActiveTab('manga'); setMobileMenuOpen(false); }}
+                    >
+                      Manga
+                    </button>
+                    <button 
                       className={`w-full text-left bg-transparent border-none cursor-pointer py-2 transition-colors ${activeTab === 'mylist' ? 'text-accent' : 'hover:text-white'}`} 
                       onClick={() => { setActiveTab('mylist'); setMobileMenuOpen(false); }}
                     >
@@ -1305,6 +1448,90 @@ function App() {
                   </div>
                 )}
               </div>
+            ) : activeTab === 'mangaSearch' ? (
+              <div className="container mx-auto px-10 md:px-16 pt-40 pb-20">
+                <SectionHeader title={`Manga Search Results for "${mangaSearchTerm}"`} className="mb-12" />
+                {isMangaSearching ? (
+                  <div className="text-xl text-zinc-400 animate-pulse font-bold">Searching database...</div>
+                ) : (
+                  <div className="flex flex-wrap gap-8">
+                    {mangaSearchResults.map((anime, idx) => (
+                      <div 
+                        key={idx} 
+                        onClick={() => openAnime(anime)}
+                        className="group relative flex-none w-[150px] sm:w-[180px] md:w-[200px] cursor-pointer mb-8"
+                      >
+                        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-700 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_40px_rgba(196,32,44,0.2)]">
+                          <img src={anime.image} alt={anime.title} className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent opacity-70 group-hover:opacity-90 transition-opacity duration-700" />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                            <div className="bg-accent p-6 rounded-full shadow-[0_0_40px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-8 group-hover:translate-y-0 transition-all duration-700">
+                              <BookOpen size={32} fill="white" className="ml-1" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-5 px-2">
+                          <h3 className="text-[18px] font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{anime.title}</h3>
+                          <div className="flex items-center gap-3 mt-3 text-sm font-bold text-zinc-500 tracking-wide">
+                            <Seal score={anime.score} />
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
+                            <span>{anime.ep_count} Chps</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : activeTab === 'manga' ? (
+              <>
+                {heroManga.length > 0 && heroManga[currentHeroIndex] && (
+                  <section className="relative h-screen min-h-[800px] w-full flex items-center justify-start overflow-hidden">
+                    <div className="absolute inset-0 bg-base" />
+                    <div
+                      key={heroManga[currentHeroIndex].banner || heroManga[currentHeroIndex].image}
+                      className={`absolute inset-0 bg-cover scale-105 transition-opacity duration-1000 animate-[heroKen_18s_ease-in-out_infinite] ${heroManga[currentHeroIndex].banner ? 'opacity-70 bg-[position:center_35%]' : 'opacity-35 bg-center'}`}
+                      style={{ backgroundImage: `url(${heroManga[currentHeroIndex].banner || heroManga[currentHeroIndex].image})` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-base via-base/30 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-base/95 via-base/55 to-transparent" />
+
+                    <div className="relative container mx-auto px-10 md:px-16 pt-32">
+                      <div className="max-w-[900px]">
+                        <span className="inline-flex items-center gap-3 text-sm font-mono font-bold text-gold mb-8 tracking-[0.25em] uppercase">
+                          <BrushDivider />
+                          Trending Manga
+                        </span>
+                        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.08] tracking-tight mb-8 drop-shadow-2xl text-white line-clamp-2 md:line-clamp-3">
+                          {heroManga[currentHeroIndex].title}
+                        </h1>
+                        <div className="flex items-center gap-6 text-[15px] text-zinc-300 font-bold mb-8">
+                          <Seal score={heroManga[currentHeroIndex].score} size="lg" />
+                          <span>{heroManga[currentHeroIndex].ep_count} Chps</span>
+                          <span className="text-zinc-600">|</span>
+                          <span className="text-zinc-400 tracking-wide">HD</span>
+                        </div>
+                        <p className="text-[16px] text-zinc-300 leading-[1.8] mb-12 line-clamp-3 drop-shadow-lg font-medium max-w-[800px]">
+                          {heroManga[currentHeroIndex].synopsis}
+                        </p>
+
+                        <div className="flex items-center gap-3 w-full max-w-[420px]">
+                          <button
+                            onClick={() => openAnime(heroManga[currentHeroIndex])}
+                            className="flex-1 flex items-center justify-center gap-2.5 bg-accent hover:bg-accent-hover transition-all hover:scale-[1.02] active:scale-[0.98] text-white font-extrabold text-[15px] px-8 py-3.5 rounded-lg shadow-lg shadow-accent/20 border-none cursor-pointer uppercase tracking-wide"
+                          >
+                            <BookOpen size={18} fill="white" /> Read Now
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+                <div className="container mx-auto px-4 sm:px-6 md:px-10 lg:px-16 -mt-10 md:-mt-20 relative z-10 space-y-12 md:space-y-24">
+                  <AnimeRow title="Trending Manga" icon={<Flame className="text-accent" />} animeList={trendingManga} openAnime={openAnime} />
+                  <AnimeRow title="Popular Manga" icon={<Sparkles className="text-accent" />} animeList={popularManga} openAnime={openAnime} />
+                </div>
+              </>
             ) : activeTab === 'browse' ? (
               <div className="container mx-auto px-10 md:px-16 pt-40 pb-20">
                 {selectedGenre ? (
