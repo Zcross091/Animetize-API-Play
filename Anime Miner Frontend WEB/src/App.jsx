@@ -88,6 +88,7 @@ function App() {
   const [activeStreamFormat, setActiveStreamFormat] = useState(null);
   const [nextAiringEpisode, setNextAiringEpisode] = useState(null);
   const [theaterMode, setTheaterMode] = useState(false);
+  const triggeredMinersRef = useRef(new Set());
   const [animeCharacters, setAnimeCharacters] = useState([]);
   const [animeRecommendations, setAnimeRecommendations] = useState([]);
   
@@ -827,9 +828,16 @@ function App() {
       setStreamError(isBlocked ? 'blocked' : 'notFound');
 
       if (!isBlocked) {
-        // Automatically ping the Vercel Proxy to wake up the Ronin API miner
-        fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(anime.title || anime.originalTitle || '')}&episode=${epNum}`)
-          .catch(e => console.error("Failed to trigger miner", e));
+        const minerKey = `${anime.title}-${epNum}`;
+        if (!triggeredMinersRef.current.has(minerKey)) {
+          triggeredMinersRef.current.add(minerKey);
+          console.log(`🟡 Triggering miner for ${minerKey}...`);
+          // Automatically ping the Vercel Proxy to wake up the Ronin API miner
+          fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(anime.title || anime.originalTitle || '')}&episode=${epNum}`)
+            .catch(e => console.error("Failed to trigger miner", e));
+        } else {
+          console.log(`🟢 Miner already triggered for ${minerKey}, skipping duplicate trigger.`);
+        }
       }
     } finally {
       setIsLoadingStream(false);
