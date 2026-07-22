@@ -89,7 +89,7 @@ async function scrapeAnimePage(browser, animeUrl, ignoreCache = false) {
 
                 const iframeSrc = await epPage.evaluate(() => {
                     const iframes = Array.from(document.querySelectorAll('iframe'));
-                    const player = iframes.find(i => i.src && (i.src.includes('.php?id=') || i.src.includes('newplayer') || i.src.includes('embed')));
+                    const player = iframes.find(i => i.src && (i.src.includes('.php?id=') || i.src.includes('.php?ep=') || i.src.includes('newplayer') || i.src.includes('embed')));
                     return player ? player.src : null;
                 });
 
