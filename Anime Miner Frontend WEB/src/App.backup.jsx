@@ -16,7 +16,6 @@ import { PlayerSidebarLeft } from './components/player/PlayerSidebarLeft';
 import { PlayerCenter } from './components/player/PlayerCenter';
 import { PlayerSidebarRight } from './components/player/PlayerSidebarRight';
 import { PlayerExpansion } from './components/player/PlayerExpansion';
-import { Dashboard } from './components/pages/Dashboard';
 import './index.css';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -156,28 +155,6 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const removeFromHistory = async (title) => {
-    setWatchHistory(prev => {
-      const newList = prev.filter(item => item.title !== title);
-      localStorage.setItem('animeWatchHistory', JSON.stringify(newList));
-      return newList;
-    });
-    if (user) {
-      await supabase.from('user_watch_history').delete().eq('user_id', user.id).eq('anime_title', title);
-    }
-  };
-
-  const removeFromWatchlist = async (title) => {
-    setWatchlist(prev => {
-      const newList = prev.filter(item => item.title !== title);
-      localStorage.setItem('animeWatchlist', JSON.stringify(newList));
-      return newList;
-    });
-    if (user) {
-      await supabase.from('user_watchlist').delete().eq('user_id', user.id).eq('anime_title', title);
-    }
-  };
 
   // Crunchyroll Redesign Data States
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1694,13 +1671,85 @@ function App() {
                 )}
               </div>
             ) : activeTab === 'mylist' ? (
-              <Dashboard 
-                watchHistory={watchHistory} 
-                watchlist={watchlist} 
-                openAnime={openAnime}
-                removeFromHistory={removeFromHistory}
-                removeFromWatchlist={removeFromWatchlist}
-              />
+              <div className="container mx-auto px-10 md:px-16 pt-40 pb-20 space-y-16">
+                
+                {/* 1. Custom Watchlist Section */}
+                <div>
+                  <SectionHeader title="My Watchlist" className="mb-10" size="text-3xl" />
+                  {watchlist.length === 0 ? (
+                    <div className="text-zinc-500 font-bold bg-white/5 border border-white/5 rounded-xl p-10 text-center">
+                      Your watchlist is empty. Add anime from the home page or detail pages!
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 md:gap-6">
+                      {watchlist.map((anime, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => openAnime(anime)}
+                          className="group relative cursor-pointer"
+                        >
+                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
+                            <img src={anime.image} alt={anime.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent opacity-85 group-hover:opacity-95 transition-opacity duration-500" />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
+                              <div className="bg-accent p-4 rounded-full shadow-[0_0_20px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
+                                <Play size={20} fill="white" className="ml-0.5" />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-4 px-1">
+                            <h3 className="text-sm font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{anime.title}</h3>
+                            <div className="flex items-center gap-2 mt-2 text-xs font-bold text-zinc-500">
+                              <Seal score={anime.score} />
+                              <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                              <span>{anime.ep_count} Eps</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Continue Watching Section */}
+                <div>
+                  <SectionHeader title="Continue Watching" className="mb-10" size="text-3xl" />
+                  {watchHistory.length === 0 ? (
+                    <div className="text-zinc-500 font-bold bg-white/5 border border-white/5 rounded-xl p-10 text-center">
+                      You haven't watched anything yet.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 md:gap-6">
+                      {watchHistory.map((item, idx) => (
+                        <div key={idx} onClick={() => openAnime(item)} className="group relative cursor-pointer">
+                          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-2xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
+                            <img src={item.image} alt={item.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-85 group-hover:opacity-95 transition-opacity duration-500" />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
+                              <div className="bg-accent p-4 rounded-full shadow-[0_0_20px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
+                                <Play size={20} fill="white" className="ml-0.5" />
+                              </div>
+                            </div>
+                            {/* Progress Bar inside image for History */}
+                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                              <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden backdrop-blur-md">
+                                <div className="h-full bg-accent shadow-[0_0_10px_var(--color-accent)]" style={{width: `${Math.min(100, (item.lastEp / item.ep_count) * 100)}%`}}></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-4 px-1">
+                            <h3 className="text-sm font-bold text-zinc-100 line-clamp-2 leading-snug group-hover:text-accent transition-colors">{item.title}</h3>
+                            <div className="mt-2 text-xs font-bold text-accent tracking-wide drop-shadow-[0_0_5px_rgba(196,32,44,0.3)]">
+                              Watched: Ep {item.lastEp} / {item.ep_count}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
             ) : (
               <>
                 {/* 2. Cinematic Hero Section */}

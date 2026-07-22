@@ -22,7 +22,7 @@ export function AnimeRow({ title, icon, animeList, openAnime }) {
             onClick={() => openAnime(anime)}
             className="group relative flex-none cursor-pointer anime-card"
           >
-            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-surface border border-white/5 group-hover:border-accent/50 transition-all duration-500 shadow-xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
+            <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg glass-panel group-hover:border-accent/50 transition-all duration-500 shadow-xl shadow-black/60 group-hover:shadow-[0_0_24px_rgba(196,32,44,0.25)]">
               <img 
                 src={anime.image} 
                 alt={anime.title} 
@@ -31,7 +31,7 @@ export function AnimeRow({ title, icon, animeList, openAnime }) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80" />
               
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
-                <div className="bg-accent p-3 rounded-full shadow-[0_0_20px_rgba(196,32,44,0.6)] backdrop-blur-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
+                <div className="glass-panel-accent p-3 rounded-full transform translate-y-4 group-hover:translate-y-0 transition-all duration-400">
                   <Play size={18} fill="white" className="ml-0.5" />
                 </div>
               </div>
