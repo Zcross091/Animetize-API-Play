@@ -61,6 +61,9 @@ export function PlayerCenter({
   relatedSeasons,
   openAnime,
   nextAiringEpisode,
+  miningSourcesList = [],
+  activeMiningSource,
+  onSourceChange,
 }) {
   return (
     <div className="player-center">
@@ -144,40 +147,25 @@ export function PlayerCenter({
           </div>
           <div className="server-switcher-right">
             
-            {/* Separate SUB and DUB automatically based on key */}
-            {['SUB', 'DUB'].map(category => {
-              const categoryStreams = Object.entries(availableStreams).filter(([key]) => {
-                if (category === 'DUB') return key.startsWith('dub-');
-                return !key.startsWith('dub-') && key !== 'torrent';
-              });
-              
-              if (categoryStreams.length === 0) return null;
-
-              return (
-                <div className="server-group" key={category}>
-                  <div className="server-group-label">
-                    {category === 'SUB' ? 'CC' : '🎤'} {category}
-                  </div>
-                  <div className="server-buttons">
-                    {categoryStreams.map(([key, url]) => {
-                      if (!url) return null;
-                      let label = key.replace('dub-', 'Server ');
-                      if (key.startsWith('server-')) label = key.replace('server-', 'Server ');
-
-                      return (
-                        <button
-                          key={key}
-                          className={`server-btn ${activeStreamFormat === key ? 'active' : ''}`}
-                          onClick={() => setActiveStreamFormat(key)}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+            <div className="server-group">
+              <div className="server-group-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <HardDriveDownload size={14} /> Source
+              </div>
+              <div className="server-buttons" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <select 
+                  className="bg-black/30 border border-white/10 rounded px-3 py-1.5 text-white text-[13px] font-bold outline-none cursor-pointer"
+                  value={activeMiningSource || ''}
+                  onChange={(e) => onSourceChange(e.target.value)}
+                >
+                  <option value="" disabled>Select Server...</option>
+                  {miningSourcesList.map(source => (
+                    <option key={source} value={source} className="bg-[#1a1b1e]">
+                      Server: {source}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {/* Show P2P Separately if available */}
             {availableStreams['torrent'] && (

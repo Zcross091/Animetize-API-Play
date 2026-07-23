@@ -85,6 +85,22 @@ function App() {
   const [activeEpRange, setActiveEpRange] = useState(0);
   
   const [availableStreams, setAvailableStreams] = useState({});
+  const [activeMiningSource, setActiveMiningSource] = useState('');
+  const [miningSourcesList, setMiningSourcesList] = useState(['Gogoanime']);
+
+  const BACKEND_URL = import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://ronin-api-proxy.vercel.app';
+
+  useEffect(() => {
+    // Fetch available mining sources from backend
+    fetch(`${BACKEND_URL}/api/sources`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.sources) {
+          setMiningSourcesList(data.sources);
+        }
+      })
+      .catch(err => console.error("Failed to fetch mining sources", err));
+  }, []);
   const [relatedSeasons, setRelatedSeasons] = useState([]);
   const [activeStreamFormat, setActiveStreamFormat] = useState(null);
   const [nextAiringEpisode, setNextAiringEpisode] = useState(null);
@@ -778,7 +794,7 @@ function App() {
     }
   };
 
-  const fetchStream = async (anime, epNum) => {
+  const fetchStream = async (anime, epNum, sourceToForce = null) => {
     setIsLoadingStream(true);
     setStreamError(false);
     setIsIframe(false);
@@ -789,73 +805,56 @@ function App() {
     try {
       const searchVariants = buildVariants([anime.title, anime.originalTitle, ...(anime.synonyms || [])].filter(Boolean));
       const fallbackTitle = anime.originalTitle || anime.title;
-
-      let dbResList = [];
-      let fetchError = null;
-
-      try {
-        const proxyUrl = `https://ronin-api-proxy.vercel.app/api/db?episode=${parseInt(epNum)}&title=${encodeURIComponent(fallbackTitle)}&searchVariants=${encodeURIComponent(JSON.stringify(searchVariants))}`;
-        const proxyRes = await fetch(proxyUrl);
-        if (proxyRes.ok) {
-          dbResList = await proxyRes.json();
-        } else {
-          throw new Error(`Proxy error: ${proxyRes.status}`);
-        }
-      } catch (proxyErr) {
-        console.warn("Proxy DB query failed, trying direct Supabase fallback...", proxyErr);
-        const { data, error } = await supabase
-          .from('anime_links')
-          .select('title, url, type')
-          .in('title', searchVariants)
-          .eq('episode', parseInt(epNum));
-        if (error) fetchError = error;
-        else dbResList = data;
-      }
-        
-      if (fetchError || !dbResList || dbResList.length === 0) {
-        throw new Error(fetchError ? `SupabaseError: ${fetchError.message}` : "Stream not found");
-      }
       
-      let formats = {};
-      let subCount = 1;
-      let dubCount = 1;
-
-      for (const dbRes of dbResList) {
-        if (dbRes.url.startsWith('magnet:')) {
-          formats['torrent'] = dbRes.url;
-        } else if (dbRes.title.endsWith(' dub')) {
-          formats[`dub-${dubCount}`] = dbRes.url;
-          dubCount++;
-        } else {
-          formats[`sub-${subCount}`] = dbRes.url;
-          subCount++;
-        }
+      let queryUrl = `${BACKEND_URL}/api/stream/${encodeURIComponent(fallbackTitle)}/${parseInt(epNum)}`;
+      if (sourceToForce) {
+        queryUrl += `?source=${encodeURIComponent(sourceToForce)}`;
       }
+
+      const res = await fetch(queryUrl);
+      if (!res.ok) {
+        throw new Error(`API Error: ${res.status}`);
+      }
+
+      const data = await res.json();
+      
+      if (!data.results || data.results.length === 0) {
+        throw new Error("Stream not found");
+      }
+
+      // Convert results to format expected by UI
+      let formats = {};
+      
+      data.results.forEach(result => {
+        if (result.url.startsWith('magnet:')) {
+          formats['torrent'] = result.url;
+        } else {
+          // Just one main stream for now since waterfall returns the best one
+          formats['main'] = result.url;
+        }
+      });
 
       setAvailableStreams(formats);
-
-      // Auto-select first available
-      const firstKey = Object.keys(formats)[0];
-      if (firstKey) {
-        setActiveStreamFormat(firstKey);
-      } else {
-        throw new Error("Unknown stream type");
+      if (formats['main']) {
+        setActiveStreamFormat('main');
+        setActiveMiningSource(sourceToForce || data.source || 'Gogoanime');
+      } else if (formats['torrent']) {
+        setActiveStreamFormat('torrent');
       }
+      
     } catch(err) {
       console.warn("fetchStream caught error:", err);
       const isBlocked = err.message?.toLowerCase().includes('failed to fetch') || 
                         err.message?.toLowerCase().includes('network') || 
-                        err.message?.toLowerCase().includes('supabaseerror') ||
                         !window.navigator.onLine;
 
       setStreamError(isBlocked ? 'blocked' : 'notFound');
 
-      if (!isBlocked) {
+      if (!isBlocked && !sourceToForce) {
         const minerKey = `${anime.title}-${epNum}`;
         if (!triggeredMinersRef.current.has(minerKey)) {
           triggeredMinersRef.current.add(minerKey);
           console.log(`🟡 Triggering miner for ${minerKey}...`);
-          // Automatically ping the Vercel Proxy to wake up the Ronin API miner
           fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(anime.title || anime.originalTitle || '')}&episode=${epNum}`)
             .catch(e => console.error("Failed to trigger miner", e));
         } else {
@@ -1841,6 +1840,9 @@ function App() {
               relatedSeasons={relatedSeasons}
               openAnime={openAnime}
               nextAiringEpisode={nextAiringEpisode}
+              miningSourcesList={miningSourcesList}
+              activeMiningSource={activeMiningSource}
+              onSourceChange={(sourceName) => fetchStream(selectedAnime, activeEpisode, sourceName)}
             />
 
             {/* ── Right Sidebar: Anime Info ── */}
