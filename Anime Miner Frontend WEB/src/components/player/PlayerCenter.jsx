@@ -158,9 +158,14 @@ export function PlayerCenter({
                   onChange={(e) => onSourceChange(e.target.value)}
                 >
                   <option value="" disabled>Select Server...</option>
-                  {miningSourcesList.map(source => (
+                  {activeMiningSource === 'Cached' && (
+                    <option value="Cached" className="bg-[#1a1b1e]">
+                      Main Server
+                    </option>
+                  )}
+                  {miningSourcesList.map((source, index) => (
                     <option key={source} value={source} className="bg-[#1a1b1e]">
-                      Server: {source}
+                      Server {index + 1}
                     </option>
                   ))}
                 </select>
