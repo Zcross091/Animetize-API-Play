@@ -793,6 +793,10 @@ function App() {
     setIsMagnet(false);
     setStreamUrl(null);
     setDownloadMagnetUrl(null);
+    
+    if (sourceToForce) {
+      setActiveMiningSource(sourceToForce);
+    }
 
     try {
       const searchVariants = buildVariants([anime.title, anime.originalTitle, ...(anime.synonyms || [])].filter(Boolean));
@@ -883,13 +887,13 @@ function App() {
 
       setStreamError(isBlocked ? 'blocked' : 'notFound');
 
-      if (!isBlocked && !sourceToForce) {
-        const minerKey = `${anime.title}-${epNum}`;
+      if (!isBlocked) {
+        const minerKey = `${anime.title}-${epNum}-${sourceToForce || 'default'}`;
         if (!triggeredMinersRef.current.has(minerKey)) {
           triggeredMinersRef.current.add(minerKey);
           console.log(`🟡 Triggering miner for ${minerKey}...`);
-          fetch(`https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(anime.title || anime.originalTitle || '')}&episode=${epNum}`)
-            .catch(e => console.error("Failed to trigger miner", e));
+          const triggerUrl = `https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(anime.title || anime.originalTitle || '')}&episode=${epNum}${sourceToForce ? `&source=${encodeURIComponent(sourceToForce)}` : ''}`;
+          fetch(triggerUrl).catch(e => console.error("Failed to trigger miner", e));
         } else {
           console.log(`🟢 Miner already triggered for ${minerKey}, skipping duplicate trigger.`);
         }
