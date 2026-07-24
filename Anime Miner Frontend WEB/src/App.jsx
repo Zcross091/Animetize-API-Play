@@ -86,21 +86,13 @@ function App() {
   
   const [availableStreams, setAvailableStreams] = useState({});
   const [activeMiningSource, setActiveMiningSource] = useState('');
-  const [miningSourcesList, setMiningSourcesList] = useState(['Gogoanime']);
+  const [miningSourcesList, setMiningSourcesList] = useState([
+    'Gogoanime', 'animeonsen', 'sudatchi', 'animegg', 'animeparadise',
+    'animez', 'animetsu', 'anikoto', 'allanime', 'kisskh', 'senshi', 'autoembed'
+  ]);
 
   const BACKEND_URL = import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://ronin-api-proxy.vercel.app';
 
-  useEffect(() => {
-    // Fetch available mining sources from backend
-    fetch(`${BACKEND_URL}/api/sources`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.sources) {
-          setMiningSourcesList(data.sources);
-        }
-      })
-      .catch(err => console.error("Failed to fetch mining sources", err));
-  }, []);
   const [relatedSeasons, setRelatedSeasons] = useState([]);
   const [activeStreamFormat, setActiveStreamFormat] = useState(null);
   const [nextAiringEpisode, setNextAiringEpisode] = useState(null);
