@@ -805,47 +805,88 @@ function App() {
     try {
       const searchVariants = buildVariants([anime.title, anime.originalTitle, ...(anime.synonyms || [])].filter(Boolean));
       const fallbackTitle = anime.originalTitle || anime.title;
-      
-      let queryUrl = `${BACKEND_URL}/api/stream/${encodeURIComponent(fallbackTitle)}/${parseInt(epNum)}`;
+
+      // ── If user explicitly picked a source, use the /api/stream endpoint ──
       if (sourceToForce) {
-        queryUrl += `?source=${encodeURIComponent(sourceToForce)}`;
-      }
+        const streamUrl = `${BACKEND_URL}/api/stream/${encodeURIComponent(fallbackTitle)}/${parseInt(epNum)}?source=${encodeURIComponent(sourceToForce)}`;
+        const res = await fetch(streamUrl);
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) throw new Error("Stream not found");
 
-      const res = await fetch(queryUrl);
-      if (!res.ok) {
-        throw new Error(`API Error: ${res.status}`);
-      }
-
-      const data = await res.json();
-      
-      if (!data.results || data.results.length === 0) {
-        throw new Error("Stream not found");
-      }
-
-      // Convert results to format expected by UI
-      let formats = {};
-      
-      data.results.forEach(result => {
-        if (result.url.startsWith('magnet:')) {
-          formats['torrent'] = result.url;
-        } else {
-          // Just one main stream for now since waterfall returns the best one
-          formats['main'] = result.url;
+        let formats = {};
+        data.results.forEach(result => {
+          if (result.url.startsWith('magnet:')) formats['torrent'] = result.url;
+          else formats['main'] = result.url;
+        });
+        setAvailableStreams(formats);
+        if (formats['main']) {
+          setActiveStreamFormat('main');
+          setActiveMiningSource(sourceToForce);
+        } else if (formats['torrent']) {
+          setActiveStreamFormat('torrent');
         }
-      });
+        return; // Done — forced source succeeded
+      }
+
+      // ── Default flow: query the DB cache via proxy ──
+      let dbResList = [];
+      let fetchError = null;
+
+      try {
+        const proxyUrl = `https://ronin-api-proxy.vercel.app/api/db?episode=${parseInt(epNum)}&title=${encodeURIComponent(fallbackTitle)}&searchVariants=${encodeURIComponent(JSON.stringify(searchVariants))}`;
+        const proxyRes = await fetch(proxyUrl);
+        if (proxyRes.ok) {
+          dbResList = await proxyRes.json();
+        } else {
+          throw new Error(`Proxy error: ${proxyRes.status}`);
+        }
+      } catch (proxyErr) {
+        console.warn("Proxy DB query failed, trying direct Supabase fallback...", proxyErr);
+        const { data, error } = await supabase
+          .from('anime_links')
+          .select('title, url, type')
+          .in('title', searchVariants)
+          .eq('episode', parseInt(epNum));
+        if (error) fetchError = error;
+        else dbResList = data;
+      }
+        
+      if (fetchError || !dbResList || dbResList.length === 0) {
+        throw new Error(fetchError ? `SupabaseError: ${fetchError.message}` : "Stream not found");
+      }
+      
+      let formats = {};
+      let subCount = 1;
+      let dubCount = 1;
+
+      for (const dbRes of dbResList) {
+        if (dbRes.url.startsWith('magnet:')) {
+          formats['torrent'] = dbRes.url;
+        } else if (dbRes.title.endsWith(' dub')) {
+          formats[`dub-${dubCount}`] = dbRes.url;
+          dubCount++;
+        } else {
+          formats[`server-${subCount}`] = dbRes.url;
+          subCount++;
+        }
+      }
 
       setAvailableStreams(formats);
-      if (formats['main']) {
-        setActiveStreamFormat('main');
-        setActiveMiningSource(sourceToForce || data.source || 'Gogoanime');
-      } else if (formats['torrent']) {
-        setActiveStreamFormat('torrent');
+
+      // Auto-select first available
+      const firstKey = Object.keys(formats)[0];
+      if (firstKey) {
+        setActiveStreamFormat(firstKey);
+        setActiveMiningSource('Cached');
+      } else {
+        throw new Error("Unknown stream type");
       }
-      
     } catch(err) {
       console.warn("fetchStream caught error:", err);
       const isBlocked = err.message?.toLowerCase().includes('failed to fetch') || 
                         err.message?.toLowerCase().includes('network') || 
+                        err.message?.toLowerCase().includes('supabaseerror') ||
                         !window.navigator.onLine;
 
       setStreamError(isBlocked ? 'blocked' : 'notFound');
