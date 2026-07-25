@@ -138,6 +138,8 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const seriesCacheRef = useRef({});
+
   useEffect(() => {
     // Get active session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -702,18 +704,22 @@ function App() {
         setRelatedSeasons([]);
     }
 
-    // Fetch from Supabase
+    // Fetch all cached episodes from Supabase for this anime series into in-memory cache
     const searchVariants = buildVariants([anime.title, anime.originalTitle, ...(anime.synonyms || [])].filter(Boolean));
-    const { data } = await supabase
-      .from('anime_links')
-      .select('episode')
-      .in('title', searchVariants)
-      .order('episode', { ascending: false })
-      .limit(1);
-      
     let maxDbEp = 0;
-    if (data && data.length > 0) {
-       maxDbEp = data[0].episode;
+    try {
+      const { data: dbEpisodes } = await supabase
+        .from('anime_links')
+        .select('title, episode, url, type')
+        .in('title', searchVariants);
+        
+      if (dbEpisodes && dbEpisodes.length > 0) {
+         maxDbEp = Math.max(...dbEpisodes.map(e => e.episode || 0));
+         const animeKey = (anime.title || anime.originalTitle || '').toLowerCase().trim();
+         seriesCacheRef.current[animeKey] = dbEpisodes;
+      }
+    } catch (dbErr) {
+      console.warn("Direct Supabase series prefetch failed:", dbErr);
     }
 
     const ultimateEps = Math.max(anime.ep_count === '?' ? 0 : (anime.ep_count || 12), anilistEpCount, maxDbEp);
@@ -801,6 +807,7 @@ function App() {
     try {
       const searchVariants = buildVariants([anime.title, anime.originalTitle, ...(anime.synonyms || [])].filter(Boolean));
       const fallbackTitle = anime.originalTitle || anime.title;
+      const animeKey = (anime.title || anime.originalTitle || '').toLowerCase().trim();
 
       // ── If user explicitly picked a source, use the /api/stream endpoint ──
       if (sourceToForce) {
@@ -825,31 +832,43 @@ function App() {
         return; // Done — forced source succeeded
       }
 
-      // ── Default flow: query the DB cache via proxy ──
-      let dbResList = [];
-      let fetchError = null;
+      // ── Step 1: Check In-Memory Series Cache (Instant 0ms) ──
+      let dbResList = (seriesCacheRef.current[animeKey] || []).filter(e => e.episode === parseInt(epNum));
 
-      try {
-        const proxyUrl = `https://ronin-api-proxy.vercel.app/api/db?episode=${parseInt(epNum)}&title=${encodeURIComponent(fallbackTitle)}&searchVariants=${encodeURIComponent(JSON.stringify(searchVariants))}`;
-        const proxyRes = await fetch(proxyUrl);
-        if (proxyRes.ok) {
-          dbResList = await proxyRes.json();
-        } else {
-          throw new Error(`Proxy error: ${proxyRes.status}`);
+      // ── Step 2: Direct Supabase Client Query (~100ms) ──
+      if (dbResList.length === 0) {
+        try {
+          const { data } = await supabase
+            .from('anime_links')
+            .select('title, episode, url, type')
+            .in('title', searchVariants)
+            .eq('episode', parseInt(epNum));
+            
+          if (data && data.length > 0) {
+            dbResList = data;
+            // Store in series cache for instant subsequent clicks
+            seriesCacheRef.current[animeKey] = [...(seriesCacheRef.current[animeKey] || []), ...data];
+          }
+        } catch (supaErr) {
+          console.warn("Direct Supabase query failed, falling back to proxy...", supaErr);
         }
-      } catch (proxyErr) {
-        console.warn("Proxy DB query failed, trying direct Supabase fallback...", proxyErr);
-        const { data, error } = await supabase
-          .from('anime_links')
-          .select('title, url, type')
-          .in('title', searchVariants)
-          .eq('episode', parseInt(epNum));
-        if (error) fetchError = error;
-        else dbResList = data;
+      }
+
+      // ── Step 3: Vercel Proxy Fallback (If direct client was blocked) ──
+      if (dbResList.length === 0) {
+        try {
+          const proxyUrl = `https://ronin-api-proxy.vercel.app/api/db?episode=${parseInt(epNum)}&title=${encodeURIComponent(fallbackTitle)}&searchVariants=${encodeURIComponent(JSON.stringify(searchVariants))}`;
+          const proxyRes = await fetch(proxyUrl);
+          if (proxyRes.ok) {
+            dbResList = await proxyRes.json();
+          }
+        } catch (proxyErr) {
+          console.warn("Proxy DB query failed:", proxyErr);
+        }
       }
         
-      if (fetchError || !dbResList || dbResList.length === 0) {
-        throw new Error(fetchError ? `SupabaseError: ${fetchError.message}` : "Stream not found");
+      if (!dbResList || dbResList.length === 0) {
+        throw new Error("Stream not found");
       }
       
       let formats = {};
