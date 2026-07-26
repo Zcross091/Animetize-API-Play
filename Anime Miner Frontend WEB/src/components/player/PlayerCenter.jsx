@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Play, ChevronLeft, ChevronRight, HardDriveDownload } from 'lucide-react';
+import { Loader2, Play, ChevronLeft, ChevronRight, HardDriveDownload, Volume2 } from 'lucide-react';
 
 function AiringCountdown({ nextAiringEpisode }) {
   if (!nextAiringEpisode) return null;
@@ -64,6 +64,9 @@ export function PlayerCenter({
   miningSourcesList = [],
   activeMiningSource,
   onSourceChange,
+  audioMode = 'sub',
+  onAudioModeChange,
+  hasDubStreams = false,
 }) {
   return (
     <div className="player-center">
@@ -147,6 +150,37 @@ export function PlayerCenter({
           </div>
           <div className="server-switcher-right">
             
+            {/* SUB / DUB Audio Switcher */}
+            <div className="server-group" style={{ marginBottom: '0.75rem' }}>
+              <div className="server-group-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <Volume2 size={14} /> Audio Track
+              </div>
+              <div className="flex gap-1.5 bg-black/40 p-1 rounded border border-white/10 w-fit">
+                <button
+                  type="button"
+                  onClick={() => onAudioModeChange && onAudioModeChange('sub')}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                    audioMode === 'sub'
+                      ? 'bg-rose-600 text-white shadow-md'
+                      : 'text-zinc-400 hover:text-white bg-transparent'
+                  }`}
+                >
+                  Japanese (SUB)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAudioModeChange && onAudioModeChange('dub')}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                    audioMode === 'dub'
+                      ? 'bg-rose-600 text-white shadow-md'
+                      : 'text-zinc-400 hover:text-white bg-transparent'
+                  }`}
+                >
+                  English (DUB) {hasDubStreams ? '' : '⚠️'}
+                </button>
+              </div>
+            </div>
+
             <div className="server-group">
               <div className="server-group-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <HardDriveDownload size={14} /> Source

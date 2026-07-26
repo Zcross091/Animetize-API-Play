@@ -85,6 +85,7 @@ function App() {
   const [activeEpRange, setActiveEpRange] = useState(0);
   
   const [availableStreams, setAvailableStreams] = useState({});
+  const [audioMode, setAudioMode] = useState('sub');
   const [activeMiningSource, setActiveMiningSource] = useState('');
   const [miningSourcesList, setMiningSourcesList] = useState([
     'Gogoanime', 'animeonsen', 'sudatchi', 'animegg', 'animeparadise',
@@ -1898,6 +1899,22 @@ function App() {
               nextAiringEpisode={nextAiringEpisode}
               miningSourcesList={miningSourcesList}
               activeMiningSource={activeMiningSource}
+              audioMode={audioMode}
+              hasDubStreams={Object.keys(availableStreams).some(k => k.startsWith('dub-'))}
+              onAudioModeChange={(mode) => {
+                setAudioMode(mode);
+                if (mode === 'dub') {
+                  const dubKey = Object.keys(availableStreams).find(k => k.startsWith('dub-'));
+                  if (dubKey) {
+                    setActiveStreamFormat(dubKey);
+                  } else if (selectedAnime) {
+                    fetchStream({ ...selectedAnime, title: `${selectedAnime.title} dub` }, activeEpisode);
+                  }
+                } else {
+                  const subKey = Object.keys(availableStreams).find(k => k.startsWith('server-') || k === 'main');
+                  if (subKey) setActiveStreamFormat(subKey);
+                }
+              }}
               onSourceChange={(sourceName) => fetchStream(selectedAnime, activeEpisode, sourceName)}
             />
 
