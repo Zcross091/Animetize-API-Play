@@ -1,0 +1,25 @@
+# Build & Output directories
+dist/
+dist-ssr/
+build/
+app/build/
+.gradle/
+.artifacts/
+web-backup/dist/
+
+# Node dependencies
+node_modules/
+
+# Environment files
+*.local
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/

@@ -1,0 +1,49 @@
+name: Run HTTP Stream Miner Manually
+
+on:
+  workflow_dispatch:
+    inputs:
+      search_query:
+        description: 'Optional: Search for a specific anime (e.g., "dragon ball")'
+        required: false
+        type: string
+      branch:
+        description: 'Branch to run from'
+        required: false
+        default: 'main'
+        type: string
+
+jobs:
+  run-miner-http:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: anime-miner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: 'anime-miner/package-lock.json'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run miner
+        env:
+          CI: true
+          PUPPETEER_HEADLESS: true
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "${{ inputs.search_query }}" ]; then
+            node miner_http.js
+          else
+            node miner_http.js "${{ inputs.search_query }}"
+          fi

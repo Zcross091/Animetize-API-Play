@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Deep Space Navy Background -->
+  <rect width="512" height="512" rx="112" fill="#04060C"/>
+  
+  <!-- The Base Shadow / Outer Frame (Deep Purple) -->
+  <polygon points="256,430 430,330 430,170 256,270" fill="#4527A0"/>
+  
+  <!-- The Primary Logic Board (Vibrant Blue) -->
+  <polygon points="256,400 82,300 256,200 430,300" fill="#2962FF"/>
+  
+  <!-- The Core Processor (Glowing Mint) -->
+  <polygon points="256,340 160,285 256,230 352,285" fill="#00BFA5"/>
+  
+  <!-- Data Node Accent (Cyan) -->
+  <circle cx="256" cy="285" r="16" fill="#84FFFF"/>
+</svg>

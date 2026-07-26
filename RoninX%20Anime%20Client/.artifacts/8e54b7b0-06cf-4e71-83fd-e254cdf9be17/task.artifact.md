@@ -1,0 +1,30 @@
+# RoninX Anime Native Rewrite Tasks
+
+- `[x]` Project Initialization
+    - `[x]` Setup Android project structure (Hilt, Compose, Navigation)
+    - `[x]` Configure `build.gradle` (libs, dependencies)
+    - `[x]` Define Package `com.roninx.anime`
+- `[x]` Networking & Data Layer
+    - `[x]` Setup Retrofit for Jikan and Ronin Proxy
+    - `[ ]` Setup Apollo Kotlin for AniList
+    - `[ ]` Setup Supabase Kotlin SDK
+    - `[x]` Implement Title Normalization logic (buildVariants)
+- `[x]` Core UI Design System
+    - `[x]` Theme setup (Colors, Typography, Shapes)
+    - `[x]` Create Glassmorphism components (Seal, Divider, etc.)
+- `[/]` Feature Implementation
+    - `[x]` Home Screen (Hero Carousel + Rows)
+    - `[ ]` Manga Screen
+    - `[ ]` Browse & Schedule Screen
+    - `[x]` Unified Search Screen
+        - `[x]` Implement SearchViewModel with debouncing
+        - `[x]` Create SearchScreen UI
+        - `[x]` Integrate Search into Navigation
+    - `[ ]` My List (Profile & Cloud Sync)
+    - `[x]` Details & Video Player (ExoPlayer integration)
+        - `[x]` Create Detail Screen UI
+        - `[x]` Implement Anime Detail fetching in Repository
+        - `[x]` Create Player Screen with ExoPlayer
+        - `[x]` Implement Stream selection and Mining trigger
+- `[ ]` Manga Reader Implementation
+- `[ ]` Final Polishing & Verification

@@ -1,0 +1,797 @@
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap');
+@import "tailwindcss";
+
+/*
+  ── RONIN / Ink & Seal ──
+  A palette drawn from sumi ink, aged washi paper, and the hanko
+  (vermilion seal stamp) used to mark authenticity on Japanese prints.
+  Display type leans on a woodblock-print serif; UI type stays a clean
+  geometric sans so the brush moments read as intentional, not decorative noise.
+*/
+
+@theme {
+  --color-base: #0A0908;
+  --color-surface: #17130F;
+  --color-accent: #C4202C;
+  --color-accent-hover: #9E121C;
+  --color-gold: #B8923D;
+
+  --color-ink-line: rgba(237, 230, 216, 0.08);
+  --color-washi: #EDE6D8;
+
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-display: "Shippori Mincho B1", "Outfit", serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-base);
+  color: white;
+  font-family: var(--font-sans);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ─── Hero Ken Burns drift ─── */
+@keyframes heroKen {
+  0%   { transform: scale(1.05) translate(0, 0); }
+  50%  { transform: scale(1.12) translate(-1%, -1%); }
+  100% { transform: scale(1.05) translate(0, 0); }
+}
+
+/* ─── Ink grain texture & Glassmorphism Orbs ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: radial-gradient(rgba(237,230,216,0.9) 0.6px, transparent 0.6px);
+  background-size: 3px 3px;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: -20%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(196,32,44,0.06) 0%, transparent 60%);
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(100px);
+}
+
+.glass-panel {
+  background: rgba(23, 19, 15, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-panel-accent {
+  background: rgba(196, 32, 44, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(196, 32, 44, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(196, 32, 44, 0.2);
+}
+
+
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "palt";
+}
+
+/* ─── Scrollbar ─── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-base); }
+::-webkit-scrollbar-thumb { background: #2a241d; border-radius: 8px; border: 2px solid var(--color-base); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
+
+/* ─── Brush divider (signature element) ───
+   A single ink-stroke used everywhere a "section marker" is needed,
+   instead of a generic rounded accent bar. */
+.brush-divider {
+  display: inline-block;
+  width: 46px;
+  height: 22px;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 48'%3E%3Cpath d='M8,40 C30,30 55,16 112,6 L114,11 C58,22 32,35 12,46 Z' fill='%23C4202C'/%3E%3Cpath d='M14,42 C34,33 58,20 108,9' stroke='%23B8923D' stroke-width='1.5' stroke-linecap='round' opacity='0.55' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: contain;
+}
+.brush-divider.lg { width: 64px; height: 30px; }
+
+/* ─── Hanko seal — used to replace plain star ratings ─── */
+.hanko {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.15em;
+  height: 2.15em;
+  padding: 0 0.35em;
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: var(--color-washi);
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 0.85em;
+  letter-spacing: -0.02em;
+  transform: rotate(-2deg);
+  box-shadow: 0 3px 12px rgba(196,32,44,0.4), inset 0 0 0 1px rgba(255,255,255,0.15);
+}
+.hanko::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 4px;
+  border: 1px solid rgba(237,230,216,0.35);
+  pointer-events: none;
+}
+.hanko.lg {
+  min-width: 2.6em;
+  height: 2.6em;
+  font-size: 1.05em;
+  border-radius: 8px;
+}
+
+/* ─── Wordmark ─── */
+.wordmark {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-washi);
+  display: inline-flex;
+  align-items: center;
+}
+.wordmark .cut {
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  top: 48%;
+  height: 3px;
+  background: var(--color-accent);
+  transform: rotate(-4deg);
+  box-shadow: 0 0 14px rgba(196,32,44,0.7);
+  pointer-events: none;
+}
+
+/* ─── Player Page ─── */
+.player-page {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: var(--color-base);
+  z-index: 100;
+  display: block; /* changed from flex */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ─── Player Body: 3-column Layout ─── */
+.player-body {
+  display: flex;
+  min-height: calc(100vh - 60px); /* Fill screen minus header */
+  background-color: #242428;
+}
+
+/* ─── Left Sidebar: Episodes ─── */
+.player-sidebar-left {
+  width: 300px;
+  flex-shrink: 0;
+  background: #2a2c31;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  background: #242428;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.player-sidebar-left .episode-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ep-list-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  transition: all 0.2s;
+  color: #fff;
+  font-size: 0.85rem;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.ep-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ep-list-item.active {
+  background: rgba(255, 186, 222, 0.1);
+  color: #ffbade;
+}
+
+.ep-list-item .ep-num {
+  font-weight: 700;
+  width: 25px;
+  opacity: 0.7;
+}
+.ep-list-item.active .ep-num {
+  opacity: 1;
+}
+
+/* ─── Center column: Video + controls ─── */
+.player-center {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: #242428;
+}
+
+/* ─── Video Wrapper ─── */
+.video-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.video-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ─── Player Controls Bar ─── */
+.player-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #2a2c31;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+}
+.player-controls-bar .controls-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.player-controls-bar .controls-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.control-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #a1a1aa;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-weight: 500;
+}
+.control-toggle span {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ─── Server Switcher Panel ─── */
+.server-switcher-panel {
+  display: flex;
+  background: #2a2c31;
+  margin: 0 1rem 1rem 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.server-switcher-left {
+  background: #ffbade;
+  color: #000;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  width: 200px;
+  flex-shrink: 0;
+}
+.server-switcher-left h4 {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+.server-switcher-left p {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin: 0;
+}
+.server-switcher-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1rem;
+  flex: 1;
+  gap: 1rem;
+}
+.server-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.server-group-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #a1a1aa;
+  width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.server-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.server-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 5px;
+  padding: 0.4rem 0.8rem;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.server-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.server-btn.active {
+  background: #ffbade;
+  color: #000;
+}
+
+/* ─── Right Sidebar: Anime Info ─── */
+.player-sidebar-right {
+  width: 320px;
+  flex-shrink: 0;
+  background: #242428;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 1.5rem;
+  gap: 1rem;
+}
+.sidebar-right-cover {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+.sidebar-right-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.2;
+}
+.sidebar-right-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #a1a1aa;
+  flex-wrap: wrap;
+}
+.sidebar-right-badge {
+  background: #fff;
+  color: #000;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+.sidebar-right-badge.pink {
+  background: #ffbade;
+}
+.sidebar-right-synopsis {
+  font-size: 0.85rem;
+  color: #a1a1aa;
+  line-height: 1.6;
+  margin-top: 0.5rem;
+}
+
+/* ─── Theater Mode ─── */
+.player-page.theater .player-sidebar-left,
+.player-page.theater .player-sidebar-right {
+  display: none;
+}
+.player-page.theater .video-wrapper {
+  max-height: calc(100vh - 48px);
+}
+
+/* ─── Mobile ─── */
+@media (max-width: 1024px) {
+  .player-body {
+    flex-direction: column;
+    height: auto;
+  }
+  .player-center {
+    flex: none;
+    overflow: visible;
+    order: 1;
+  }
+  .player-sidebar-left {
+    width: 100%;
+    border-right: none;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    flex: none;
+    max-height: 400px;
+    order: 2;
+  }
+  .player-sidebar-right {
+    width: 100%;
+    border-right: none;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    flex: none;
+    order: 3;
+  }
+  .player-controls-bar {
+    font-size: 0.75rem;
+    padding: 0.75rem 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+  .player-controls-bar .controls-left,
+  .player-controls-bar .controls-right {
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+  .server-switcher-panel {
+    flex-direction: column;
+    margin: 0 0.5rem 0.5rem 0.5rem;
+    border-radius: 6px;
+  }
+  .server-switcher-left {
+    width: 100%;
+    padding: 0.75rem;
+  }
+  .server-switcher-left h4 {
+    font-size: 1rem;
+    margin-bottom: 0.1rem;
+  }
+  .server-switcher-left p {
+    font-size: 0.65rem;
+  }
+  .server-switcher-right {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+  .server-group-label {
+    font-size: 0.75rem;
+    width: 100%;
+  }
+  .server-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .server-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+}
+
+
+/* ─── Player Header ─── */
+.player-header {
+  padding: 0.75rem 4%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-ink-line);
+  background: var(--color-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+.player-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(0.9rem, 3vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-header button {
+  flex-shrink: 0;
+  font-size: clamp(0.75rem, 2vw, 0.9rem);
+  padding: 0.4rem 0.9rem;
+  white-space: nowrap;
+}
+
+/* ─── States ─── */
+.p2p-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  gap: 0.5rem;
+}
+.p2p-state h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 4vw, 1.8rem);
+}
+.p2p-state p {
+  font-size: clamp(0.8rem, 2.5vw, 1rem);
+  max-width: 480px;
+}
+
+/* ─── Anime Info Panel ─── */
+.anime-info-panel {
+  display: flex;
+  gap: 1.25rem;
+  padding: 1.25rem 4%;
+  background: var(--color-surface);
+}
+.anime-info-panel img {
+  width: clamp(80px, 18vw, 160px);
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.anime-info-panel .info-text h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 3.5vw, 1.8rem);
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+.anime-info-panel .info-text p {
+  font-size: clamp(0.75rem, 2vw, 0.875rem);
+  line-height: 1.7;
+  color: #a1a1aa;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Server Switcher Bar ─── */
+.server-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 4%;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-ink-line);
+  border-bottom: 1px solid var(--color-ink-line);
+}
+.server-bar-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #71717a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ─── Range Selector Bar ─── */
+.range-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 4%;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-ink-line);
+  background: var(--color-base);
+}
+.range-bar::-webkit-scrollbar { height: 2px; }
+.range-bar::-webkit-scrollbar-track { background: transparent; }
+.range-bar::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 2px; }
+
+/* ─── Episode Grid ─── */
+.episode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 0.4rem;
+  padding: 0.75rem 4%;
+  background: var(--color-base);
+}
+@media (max-width: 480px) {
+  .episode-grid {
+    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    gap: 0.3rem;
+  }
+}
+
+/* ─── Missing Ep Input ─── */
+.missing-ep-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 4%;
+  background: var(--color-base);
+  border-top: 1px solid var(--color-ink-line);
+}
+.missing-ep-row span {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #71717a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.missing-ep-row input {
+  background: rgba(237,230,216,0.05);
+  border: 1px solid var(--color-ink-line);
+  color: white;
+  padding: 0.35rem 0.6rem;
+  width: 90px;
+  border-radius: 6px;
+  outline: none;
+  font-size: 0.8rem;
+  transition: border-color 0.2s;
+}
+.missing-ep-row input:focus {
+  border-color: var(--color-accent);
+}
+
+/* ─── Episode Button ─── */
+.ep-btn {
+  background: rgba(237,230,216,0.04);
+  border: 1px solid var(--color-ink-line);
+  color: white;
+  padding: 0.35rem 0.25rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: var(--font-mono);
+  font-size: clamp(0.65rem, 2vw, 0.8rem);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1;
+  width: 100%;
+}
+.episode-grid .ep-btn {
+  aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.ep-btn:hover { background: rgba(237,230,216,0.1); transform: translateY(-1px); }
+.ep-btn.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px rgba(196,32,44,0.5);
+  transform: scale(1.05);
+}
+
+/* ─── Range Button ─── */
+.range-btn {
+  background: rgba(237,230,216,0.04);
+  border: 1px solid var(--color-ink-line);
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  transition: all 0.18s;
+  flex-shrink: 0;
+}
+.range-btn:hover { background: rgba(237,230,216,0.1); }
+.range-btn.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 10px rgba(196,32,44,0.4);
+}
+
+/* ─── Utility Buttons ─── */
+.magnet-btn {
+  background: var(--color-accent);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+}
+.magnet-btn:hover { background: var(--color-accent-hover); transform: scale(1.05); }
+
+.watch-btn {
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  padding: 0.85rem 1.75rem;
+  border-radius: 6px;
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+  transition: background-color 0.2s;
+}
+.watch-btn:hover { background: var(--color-accent-hover); }
+
+/* ─── Episode Selector (legacy compat) ─── */
+.episode-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 1rem 4%;
+}
+
+/* ─── Anime Card Responsive Width ─── */
+.anime-card { width: clamp(140px, 19vw, 240px); }
+@media (min-width: 480px)  { .anime-card { width: clamp(140px, 17vw, 240px); } }
+@media (min-width: 768px)  { .anime-card { width: clamp(140px, 15vw, 240px); } }
+@media (min-width: 1024px) { .anime-card { width: clamp(140px, 13vw, 240px); } }
+@media (min-width: 1440px) { .anime-card { width: clamp(140px, 11vw, 240px); } }
