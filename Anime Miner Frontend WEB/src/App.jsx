@@ -912,7 +912,8 @@ function App() {
         if (!triggeredMinersRef.current.has(minerKey)) {
           triggeredMinersRef.current.add(minerKey);
           console.log(`🟡 Triggering miner for ${minerKey}...`);
-          const triggerUrl = `https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(anime.title || anime.originalTitle || '')}&episode=${epNum}${sourceToForce ? `&source=${encodeURIComponent(sourceToForce)}` : ''}`;
+          const targetTitle = anime.originalTitle || anime.title || '';
+          const triggerUrl = `https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(targetTitle)}&episode=${epNum}${sourceToForce ? `&source=${encodeURIComponent(sourceToForce)}` : ''}`;
           fetch(triggerUrl).catch(e => console.error("Failed to trigger miner", e));
         } else {
           console.log(`🟢 Miner already triggered for ${minerKey}, skipping duplicate trigger.`);
