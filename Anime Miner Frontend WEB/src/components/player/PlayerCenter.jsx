@@ -67,6 +67,7 @@ export function PlayerCenter({
   audioMode = 'sub',
   onAudioModeChange,
   hasDubStreams = false,
+  audioNotice = null,
 }) {
   return (
     <div className="player-center">
@@ -179,6 +180,11 @@ export function PlayerCenter({
                   English (DUB) {hasDubStreams ? '' : '⚠️'}
                 </button>
               </div>
+              {audioNotice && (
+                <div style={{ marginTop: '0.5rem', fontSize: '12px', fontWeight: '600', color: '#fbbf24', backgroundColor: 'rgba(120, 53, 15, 0.4)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.35rem 0.75rem', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                  <span>ℹ️</span> {audioNotice}
+                </div>
+              )}
             </div>
 
             <div className="server-group">

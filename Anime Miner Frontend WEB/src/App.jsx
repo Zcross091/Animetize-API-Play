@@ -86,6 +86,7 @@ function App() {
   
   const [availableStreams, setAvailableStreams] = useState({});
   const [audioMode, setAudioMode] = useState('sub');
+  const [audioNotice, setAudioNotice] = useState(null);
   const [activeMiningSource, setActiveMiningSource] = useState('');
   const [miningSourcesList, setMiningSourcesList] = useState([
     'Gogoanime', 'animeonsen', 'sudatchi', 'animegg', 'animeparadise',
@@ -911,10 +912,14 @@ function App() {
         const minerKey = `${anime.title}-${epNum}-${sourceToForce || 'default'}`;
         if (!triggeredMinersRef.current.has(minerKey)) {
           triggeredMinersRef.current.add(minerKey);
-          console.log(`🟡 Triggering miner for ${minerKey}...`);
+          console.log(`🟡 Triggering Sub & Dub miners together for ${minerKey}...`);
           const targetTitle = anime.originalTitle || anime.title || '';
-          const triggerUrl = `https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(targetTitle)}&episode=${epNum}${sourceToForce ? `&source=${encodeURIComponent(sourceToForce)}` : ''}`;
-          fetch(triggerUrl).catch(e => console.error("Failed to trigger miner", e));
+          
+          const triggerSubUrl = `https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(targetTitle)}&episode=${epNum}${sourceToForce ? `&source=${encodeURIComponent(sourceToForce)}` : ''}`;
+          fetch(triggerSubUrl).catch(e => console.error("Failed to trigger Sub miner", e));
+
+          const triggerDubUrl = `https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(targetTitle + ' dub')}&episode=${epNum}${sourceToForce ? `&source=${encodeURIComponent(sourceToForce)}` : ''}`;
+          fetch(triggerDubUrl).catch(e => console.error("Failed to trigger Dub miner", e));
         } else {
           console.log(`🟢 Miner already triggered for ${minerKey}, skipping duplicate trigger.`);
         }
@@ -1901,17 +1906,28 @@ function App() {
               miningSourcesList={miningSourcesList}
               activeMiningSource={activeMiningSource}
               audioMode={audioMode}
+              audioNotice={audioNotice}
               hasDubStreams={Object.keys(availableStreams).some(k => k.startsWith('dub-'))}
               onAudioModeChange={(mode) => {
-                setAudioMode(mode);
                 if (mode === 'dub') {
                   const dubKey = Object.keys(availableStreams).find(k => k.startsWith('dub-'));
                   if (dubKey) {
+                    setAudioMode('dub');
                     setActiveStreamFormat(dubKey);
-                  } else if (selectedAnime) {
-                    fetchStream({ ...selectedAnime, title: `${selectedAnime.title} dub` }, activeEpisode);
+                    setAudioNotice(null);
+                  } else {
+                    setAudioMode('sub');
+                    setAudioNotice(`English Dub is not available for Episode ${activeEpisode}. Continuing on Japanese Sub.`);
+                    setTimeout(() => setAudioNotice(null), 4000);
+                    if (selectedAnime) {
+                      const targetTitle = selectedAnime.originalTitle || selectedAnime.title || '';
+                      const triggerDubUrl = `https://ronin-api-proxy.vercel.app/api/trigger-miner?title=${encodeURIComponent(targetTitle + ' dub')}&episode=${activeEpisode}`;
+                      fetch(triggerDubUrl).catch(e => console.error("Failed to trigger Dub miner", e));
+                    }
                   }
                 } else {
+                  setAudioMode('sub');
+                  setAudioNotice(null);
                   const subKey = Object.keys(availableStreams).find(k => k.startsWith('server-') || k === 'main');
                   if (subKey) setActiveStreamFormat(subKey);
                 }
