@@ -2,19 +2,33 @@ name: Daily Anime Stream Miner
 
 on:
   schedule:
-    # Runs daily at 17:10 UTC (10:40 PM IST)
+    # Runs twice daily at 05:00 UTC and 17:10 UTC (10:30 AM & 10:40 PM IST)
+    - cron: '0 5 * * *'
     - cron: '10 17 * * *'
-  workflow_dispatch: # Allows manual triggering anytime via Actions tab
+  workflow_dispatch:
+    inputs:
+      query:
+        description: 'Optional: Anime title to mine (leave blank for Auto-Crawler Mode)'
+        required: false
+        default: ''
+      episode:
+        description: 'Optional: Episode number'
+        required: false
+        default: ''
+      source:
+        description: 'Optional: Source override (e.g. allanime, gogoanime)'
+        required: false
+        default: ''
 
 jobs:
   trigger-crawler:
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch Auto-Crawler to Ronin API
+      - name: Dispatch Auto-Crawler / Miner to Ronin API
         run: |
-          echo "🚀 Dispatching daily auto-crawler event to Ronin-API..."
+          echo "🚀 Dispatching auto-crawler event to Ronin-API..."
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ secrets.GITHUB_PAT || secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/Zcross091/Ronin-API/dispatches \
-            -d '{"event_type": "search-or-mine", "client_payload": {"query": "", "episode": "", "source": ""}}'
+            -d "{\"event_type\": \"search-or-mine\", \"client_payload\": {\"query\": \"${{ github.event.inputs.query || '' }}\", \"episode\": \"${{ github.event.inputs.episode || '' }}\", \"source\": \"${{ github.event.inputs.source || '' }}\"}}"
