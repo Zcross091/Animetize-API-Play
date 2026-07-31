@@ -89,7 +89,7 @@ function App() {
   const [audioNotice, setAudioNotice] = useState(null);
   const [activeMiningSource, setActiveMiningSource] = useState('');
   const [miningSourcesList, setMiningSourcesList] = useState([
-    'Gogoanime', 'animeonsen', 'sudatchi', 'animegg', 'animeparadise',
+    'Ronin API', 'GogoAnime Direct', 'animeonsen', 'sudatchi', 'animegg', 'animeparadise',
     'animez', 'animetsu', 'anikoto', 'allanime', 'kisskh', 'senshi', 'autoembed'
   ]);
 
