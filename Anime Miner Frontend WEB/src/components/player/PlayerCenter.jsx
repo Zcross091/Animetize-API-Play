@@ -205,7 +205,7 @@ export function PlayerCenter({
                   )}
                   {miningSourcesList.map((source, index) => (
                     <option key={source} value={source} className="bg-[#1a1b1e]">
-                      Server {index + 1}
+                      Server {index + 1} ({source})
                     </option>
                   ))}
                 </select>
