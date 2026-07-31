@@ -1,10 +1,6 @@
 name: Daily Anime Stream Miner
 
 on:
-  schedule:
-    # Runs twice daily at 05:00 UTC and 17:10 UTC (10:30 AM & 10:40 PM IST)
-    - cron: '0 5 * * *'
-    - cron: '10 17 * * *'
   workflow_dispatch:
     inputs:
       query:
