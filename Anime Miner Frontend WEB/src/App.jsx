@@ -90,7 +90,7 @@ function App() {
   const [activeMiningSource, setActiveMiningSource] = useState('');
   const [miningSourcesList, setMiningSourcesList] = useState([
     'Ronin API', 'GogoAnime Direct', 'animeonsen', 'sudatchi', 'animegg', 'animeparadise',
-    'animez', 'animetsu', 'anikoto', 'allanime', 'kisskh', 'senshi', 'autoembed'
+    'animez', 'animetsu', 'anikoto', 'allanime', 'kisskh', 'senshi', 'autoembed', 'animepahe'
   ]);
 
   const BACKEND_URL = import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://ronin-api-proxy.vercel.app';
