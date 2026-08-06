@@ -41,9 +41,10 @@ jobs:
           PUPPETEER_HEADLESS: true
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SEARCH_QUERY: ${{ inputs.search_query }}
         run: |
-          if [ -z "${{ inputs.search_query }}" ]; then
+          if [ -z "$SEARCH_QUERY" ]; then
             node miner_http.js
           else
-            node miner_http.js "${{ inputs.search_query }}"
+            node miner_http.js "$SEARCH_QUERY"
           fi
