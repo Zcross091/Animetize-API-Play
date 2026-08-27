@@ -117,10 +117,9 @@ function App() {
   const [availableStreams, setAvailableStreams] = useState({});
   const [audioMode, setAudioMode] = useState('sub');
   const [audioNotice, setAudioNotice] = useState(null);
-  const [activeMiningSource, setActiveMiningSource] = useState('');
+  const [activeMiningSource, setActiveMiningSource] = useState('Ronin API (Default)');
   const [miningSourcesList, setMiningSourcesList] = useState([
-    'Ronin API', 'GogoAnime Direct', 'animeonsen', 'sudatchi', 'animegg', 'animeparadise',
-    'animez', 'animetsu', 'anikoto', 'allanime', 'kisskh', 'senshi', 'autoembed', 'animepahe'
+    'Ronin API (Default)', 'GogoAnime Direct', 'Animepahe Direct', 'HiAnime Mirror', 'AutoEmbed Mirror'
   ]);
 
   const BACKEND_URL = import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://ronin-api-proxy.vercel.app';
@@ -845,8 +844,8 @@ function App() {
       const fallbackTitle = anime.originalTitle || anime.title;
       const animeKey = (anime.title || anime.originalTitle || '').toLowerCase().trim();
 
-      // If user explicitly picked a source, use the /api/stream endpoint
-      if (sourceToForce) {
+      // If user explicitly picked an alternate source, use the /api/stream endpoint
+      if (sourceToForce && sourceToForce !== 'Ronin API (Default)' && sourceToForce !== 'Ronin API') {
         const streamApiUrl = `${BACKEND_URL}/api/stream/${encodeURIComponent(fallbackTitle)}/${parseInt(epNum)}?source=${encodeURIComponent(sourceToForce)}`;
         const res = await fetchWithTimeout(streamApiUrl, {}, 10000);
         if (!res.ok) throw new Error(`API Error: ${res.status}`);
@@ -927,7 +926,7 @@ function App() {
       const firstKey = Object.keys(formats)[0];
       if (firstKey) {
         setActiveStreamFormat(firstKey);
-        setActiveMiningSource('Cached');
+        setActiveMiningSource('Ronin API (Default)');
       } else {
         throw new Error("Unknown stream type");
       }

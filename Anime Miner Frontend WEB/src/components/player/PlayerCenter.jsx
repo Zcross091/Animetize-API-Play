@@ -193,21 +193,18 @@ export function PlayerCenter({
               </div>
               <div className="server-buttons" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <select 
-                  className="bg-black/30 border border-white/10 rounded px-3 py-1.5 text-white text-[13px] font-bold outline-none cursor-pointer"
-                  value={activeMiningSource || ''}
+                  className="bg-black/50 border border-white/20 rounded-lg px-3 py-1.5 text-white text-[13px] font-bold outline-none cursor-pointer hover:border-accent/60 transition-colors"
+                  value={activeMiningSource || 'Ronin API (Default)'}
                   onChange={(e) => onSourceChange(e.target.value)}
                 >
-                  <option value="" disabled>Select Server...</option>
-                  {activeMiningSource === 'Cached' && (
-                    <option value="Cached" className="bg-[#1a1b1e]">
-                      Main Server
-                    </option>
-                  )}
-                  {miningSourcesList.map((source, index) => (
-                    <option key={source} value={source} className="bg-[#1a1b1e]">
-                      Server {index + 1} ({source})
-                    </option>
-                  ))}
+                  {miningSourcesList.map((source, index) => {
+                    const isRonin = source.toLowerCase().includes('ronin') || source === 'Cached';
+                    return (
+                      <option key={source} value={source} className="bg-[#17130F] text-white">
+                        {isRonin ? `⭐ Server 1: Ronin API (Default)` : `Server ${index + 1}: ${source}`}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
