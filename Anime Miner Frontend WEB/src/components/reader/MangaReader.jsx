@@ -63,27 +63,38 @@ export default function MangaReader({ selectedManga, closeReader, user, supabase
           throw new Error("Could not find this manga on MangaDex.");
         }
 
+        let chaptersFound = false;
+
         // Fetch chapters info
-        const infoRes = await fetch(`https://ronin-api-proxy.vercel.app/manga/${provider.toLowerCase()}/info/${mangaId}`);
-        if (!infoRes.ok) {
-          throw new Error(`Failed to fetch manga chapters: ${infoRes.statusText}`);
+        if (mangaId) {
+          try {
+            const infoRes = await fetch(`https://ronin-api-proxy.vercel.app/manga/${provider.toLowerCase()}/info/${mangaId}`);
+            if (infoRes.ok) {
+              const infoData = await infoRes.json();
+              if (infoData.chapters && infoData.chapters.length > 0) {
+                const sortedChapters = infoData.chapters.sort((a, b) => {
+                  const numA = parseFloat(a.title.replace(/[^\d.]/g, '')) || 0;
+                  const numB = parseFloat(b.title.replace(/[^\d.]/g, '')) || 0;
+                  return numB - numA;
+                });
+                setChapters(sortedChapters);
+                setActiveChapter(sortedChapters[sortedChapters.length - 1]);
+                chaptersFound = true;
+              }
+            }
+          } catch (fetchErr) {
+            console.warn("Failed fetching info from provider:", fetchErr);
+          }
         }
-        
-        const infoData = await infoRes.json();
-        if (infoData.chapters && infoData.chapters.length > 0) {
-          // Sort chapters numerically if possible
-          const sortedChapters = infoData.chapters.sort((a, b) => {
-            const numA = parseFloat(a.title.replace(/[^\d.]/g, '')) || 0;
-            const numB = parseFloat(b.title.replace(/[^\d.]/g, '')) || 0;
-            return numB - numA; // Descending order (newest chapters first)
-          });
-          setChapters(sortedChapters);
-          
-          // Auto select first chapter (oldest or first in index)
-          // Usually oldest is at the end of descending array
-          setActiveChapter(sortedChapters[sortedChapters.length - 1]);
-        } else {
-          throw new Error("No chapters available for this manga.");
+
+        // If still no chapters found, dispatch the on-demand Manga Miner to GitHub Actions
+        if (!chaptersFound) {
+          const targetTitle = selectedManga.originalTitle || selectedManga.title || '';
+          console.log(`🤖 Auto-triggering background manga miner for "${targetTitle}"...`);
+          fetch(`https://ronin-api-proxy.vercel.app/api/trigger-manga-miner?title=${encodeURIComponent(targetTitle)}&chapter=1`)
+            .catch(err => console.warn("Failed to dispatch manga miner:", err));
+
+          throw new Error("No cached chapters found yet. Dispatched Ronin Cloud Miner to scrape this manga in the background! Please retry shortly.");
         }
 
       } catch (err) {
@@ -271,8 +282,22 @@ export default function MangaReader({ selectedManga, closeReader, user, supabase
                   <span className="text-xs font-bold font-mono">Loading index...</span>
                 </div>
               ) : error && !activeChapter ? (
-                <div className="p-6 text-center text-xs text-red-500 font-bold bg-red-500/10 border border-red-500/20 m-4 rounded-xl">
-                  {error}
+                <div className="p-6 text-center text-xs text-red-400 font-bold bg-red-500/10 border border-red-500/20 m-4 rounded-xl flex flex-col items-center gap-3">
+                  <div>{error}</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetTitle = selectedManga.originalTitle || selectedManga.title || '';
+                      fetch(`https://ronin-api-proxy.vercel.app/api/trigger-manga-miner?title=${encodeURIComponent(targetTitle)}&chapter=1`).catch(()=>{});
+                      setIsLoadingChapters(true);
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 2000);
+                    }}
+                    className="px-4 py-2 bg-accent text-white font-bold rounded-lg border-none cursor-pointer hover:bg-accent/80 transition-all text-xs flex items-center gap-2"
+                  >
+                    🔄 Re-check / Mine Again
+                  </button>
                 </div>
               ) : (
                 chapters.map((chapter) => (
