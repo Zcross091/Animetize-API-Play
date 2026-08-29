@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Play, ChevronLeft, ChevronRight, HardDriveDownload, Volume2 } from 'lucide-react';
 
+import HlsVideoPlayer from './HlsVideoPlayer';
+
 function AiringCountdown({ nextAiringEpisode }) {
   if (!nextAiringEpisode) return null;
 
@@ -104,16 +106,12 @@ export function PlayerCenter({
         ) : activeStreamFormat && availableStreams[activeStreamFormat]?.startsWith('http') ? (
           (() => {
             const streamUrl = availableStreams[activeStreamFormat];
-            const isDirectVideo = streamUrl.match(/\.(mp4|webm|m4v)(\?.*)?$/i);
-            if (isDirectVideo) {
+            const isDirectVideoOrHls = streamUrl.match(/\.(m3u8|mp4|webm|m4v)(\?.*)?$/i) || streamUrl.includes('/hls') || streamUrl.includes('.shop/hls') || streamUrl.includes('Ep9_index.m3u8');
+            if (isDirectVideoOrHls) {
               return (
-                <video
+                <HlsVideoPlayer
                   key={streamUrl}
                   src={streamUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
                 />
               );
             }
