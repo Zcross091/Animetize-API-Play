@@ -102,7 +102,33 @@ export function PlayerCenter({
             </a>
           </div>
         ) : activeStreamFormat && availableStreams[activeStreamFormat]?.startsWith('http') ? (
-          <iframe src={availableStreams[activeStreamFormat]} allowFullScreen allow="autoplay; fullscreen" title="Anime Player" />
+          (() => {
+            const streamUrl = availableStreams[activeStreamFormat];
+            const isDirectVideo = streamUrl.match(/\.(mp4|webm|m4v)(\?.*)?$/i);
+            if (isDirectVideo) {
+              return (
+                <video
+                  key={streamUrl}
+                  src={streamUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                />
+              );
+            }
+            return (
+              <iframe
+                key={streamUrl}
+                src={streamUrl}
+                allowFullScreen
+                referrerPolicy="no-referrer"
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                title="Anime Player"
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            );
+          })()
         ) : (
           // Not playing yet — show placeholder
           <div className="p2p-state">
